@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSSO Trivia Giveaway</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- QRCode JS Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Firebase Compat Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at top, #102a43 0%, #0b192c 60%, #030712 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .csso-gold-gradient {
+            background: linear-gradient(135deg, #fde047 0%, #f59e0b 50%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .csso-gold-bg {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+        }
+
+        .csso-navy-card {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+        }
+
+        .btn-action {
+            transition: all 0.15s ease-in-out;
+        }
+        .btn-action:active {
+            transform: scale(0.96);
+        }
+
+        /* Slot Machine Randomizer animation */
+        .slot-rolling {
+            animation: slotPulse 0.1s infinite alternate;
+        }
+        @keyframes slotPulse {
+            0% { transform: scale(0.98) translateY(-2px); filter: blur(0.5px); }
+            100% { transform: scale(1.02) translateY(2px); filter: blur(0px); }
+        }
+
+        .slot-winner {
+            animation: winnerGlow 0.6s infinite alternate;
+            color: #f59e0b;
+        }
+        @keyframes winnerGlow {
+            0% { text-shadow: 0 0 10px rgba(245, 158, 11, 0.5); transform: scale(1); }
+            100% { text-shadow: 0 0 30px rgba(245, 158, 11, 1), 0 0 50px rgba(251, 191, 36, 0.8); transform: scale(1.08); }
+        }
+
+        /* Podium Heights */
+        .podium-1 { height: 190px; background: linear-gradient(to bottom, #fbbf24, #b45309); }
+        .podium-2 { height: 130px; background: linear-gradient(to bottom, #cbd5e1, #64748b); }
+        .podium-3 { height: 95px; background: linear-gradient(to bottom, #d97706, #78350f); }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(11, 25, 44, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(245, 158, 11, 0.4); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(245, 158, 11, 0.8); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between p-3 sm:p-6 min-h-screen">
+
+    <header class="w-full max-w-4xl flex items-center justify-between py-3 px-4 mb-4 csso-navy-card rounded-2xl shadow-xl border border-amber-500/30">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl csso-gold-bg flex items-center justify-center text-blue-950 font-black text-xl sm:text-2xl shadow-lg border border-amber-200">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                    CSSO <span class="csso-gold-gradient">TRIVIA</span>
+                </h1>
+                <p class="text-xs text-amber-200/80 font-semibold tracking-wider uppercase">Annual Giveaway Edition</p>
+            </div>
+        </div>
+        <div id="header-status-badge" class="bg-blue-950/90 text-amber-300 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-500/40 shadow-inner flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Live System</span>
+        </div>
+    </header>
+
+    <main id="app" class="w-full max-w-4xl csso-navy-card rounded-3xl shadow-2xl p-4 sm:p-8 flex-grow flex flex-col justify-between min-h-[78vh] relative overflow-hidden border border-amber-500/30">
+        
+        <!-- Global Loading Overlay -->
+        <div id="loading-spinner" class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md transition-opacity duration-300">
+            <div class="w-16 h-16 border-4 border-amber-500/20 border-t-amber-400 rounded-full animate-spin mb-4"></div>
+            <p class="text-lg font-bold text-amber-300 animate-pulse tracking-wide">Initializing CSSO Trivia System...</p>
+        </div>
+
+        <!-- Dynamic Content Container -->
+        <div id="content" class="flex-grow flex flex-col w-full"></div>
+    </main>
+
+    <!-- Raw JSON Modal Popup -->
+    <div id="json-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-2xl w-full space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-amber-500/20 pb-3">
+                <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-file-code"></i> Copy / Paste Raw Questions JSON
+                </h3>
+                <button id="btn-close-modal" class="text-slate-400 hover:text-white text-2xl font-bold px-2">&times;</button>
+            </div>
+            <p class="text-xs text-blue-200/80">
+                You can copy your questions list from here or paste a new JSON array to load questions instantly.
+            </p>
+            <textarea id="json-textarea" class="w-full h-64 bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs text-amber-300 focus:outline-none focus:border-amber-400 shadow-inner"></textarea>
+            <div class="flex flex-wrap justify-between items-center gap-2 pt-2">
+                <button id="btn-copy-json" class="btn-action bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 border border-slate-700">
+                    <i class="fa-solid fa-copy text-amber-400"></i> Copy to Clipboard
+                </button>
+                <div class="flex gap-2">
+                    <button id="btn-apply-json" class="btn-action csso-gold-bg text-blue-950 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider">
+                        Apply & Save Questions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Custom Modal -->
+    <div id="reset-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-red-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-center">
+            <div class="w-16 h-16 bg-red-950/80 text-red-400 border border-red-500/40 rounded-full flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-extrabold text-white">Reset Questions to Default?</h3>
+            <p class="text-xs text-slate-300">
+                This will overwrite your current question list in localStorage with the default CSSO sample trivia set.
+            </p>
+            <div class="flex gap-3 pt-2">
+                <button id="btn-cancel-reset" class="btn-action flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-xl text-xs">
+                    Cancel
+                </button>
+                <button id="btn-confirm-reset" class="btn-action flex-1 bg-red-600 hover:bg-red-500 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg">
+                    Reset Questions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Message -->
+    <div id="toast-message" class="fixed bottom-6 right-6 z-50 bg-emerald-900 text-emerald-200 border border-emerald-400/50 px-5 py-3 rounded-2xl shadow-2xl font-bold text-sm transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toast-text">Questions saved successfully!</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-4 text-center text-xs text-blue-200/60 font-medium">
+        California Community Colleges Chief Student Services Officers Association &bull; Trivia Giveaway App
+    </footer>
+
+    <script>
+        const LOCAL_STORAGE_KEY = 'csso_trivia_questions_v2';
+
+        // Sample Starter CSSO Questions
+        const defaultSampleQuestions = [
+            {
+                id: 'sample_1',
+                text: "What does the abbreviation 'CSSO' stand for in California Community Colleges?",
+                options: [
+                    "California Student Services Organization",
+                    "Chief Student Services Officers",
+                    "Community Support and Student Operations",
+                    "Council of Student Service Overseers"
+                ],
+                correctIndex: 1,
+                timeLimit: 15
+            },
+            {
+                id: 'sample_2',
+                text: "How many accredited colleges are part of the California Community Colleges system?",
+                options: [
+                    "72 Colleges",
+                    "105 Colleges",
+                    "116 Colleges",
+                    "125 Colleges"
+                ],
+                correctIndex: 2,
+                timeLimit: 15
+            },
+            {
+                id: 'sample_3',
+                text: "Which system is the largest higher education system in the United States?",
+                options: [
+                    "California State University (CSU)",
+                    "University of California (UC)",
+                    "California Community Colleges (CCC)",
+                    "State University of New York (SUNY)"
+                ],
+                correctIndex: 2,
+                timeLimit: 15
+            },
+            {
+                id: 'sample_4',
+                text: "In what year was the California Community Colleges Board of Governors officially created?",
+                options: [
+                    "1967",
+                    "1972",
+                    "1985",
+                    "1990"
+                ],
+                correctIndex: 0,
+                timeLimit: 15
+            },
+            {
+                id: 'sample_5',
+                text: "What is a primary strategic goal of the CSSO Association?",
+                options: [
+                    "Managing campus parking permits",
+                    "Advocating for student leadership, equity, and student success",
+                    "Organizing intercollegiate basketball tournaments",
+                    "Auditing state revenue taxes"
+                ],
+                correctIndex: 1,
+                timeLimit: 15
+            }
+        ];
+
+        // Application State
+        let localQuestions = [];
+        let editingQuestionIndex = -1;
+        let players = [];
+        let allAnswers = [];
+        let myAnswer = null;
+        let timerInterval = null;
+        let currentUser = { uid: 'user_' + Math.random().toString(36).substr(2, 9) };
+
+        let gameState = {
+            status: 'setup',
+            hostId: null,
+            quizData: [],
+            currentQuestionIndex: -1,
+            questionEndTime: 0,
+            questionStartTime: 0,
+            showAnswer: false,
+            rollingWinner: false,
+            roundWinner: null
+        };
+
+        // URL Parameter Routing check
+        const urlParams = new URLSearchParams(window.location.search);
+        const isJoinParam = urlParams.get('join') === 'true';
+        let role = isJoinParam ? 'player' : null;
+
+        function loadSavedQuestions() {
+            try {
+                const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (saved !== null && saved !== undefined) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        localQuestions = parsed;
+                        console.log("Successfully loaded " + parsed.length + " questions from localStorage.");
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.warn("localStorage read failed", e);
+            }
+            
+            // Default fallback if no saved questions exist
+            localQuestions = JSON.parse(JSON.stringify(defaultSampleQuestions));
+            saveQuestionsToStorage();
+            return false;
+        }
+
+        function saveQuestionsToStorage() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localQuestions));
+            } catch (e) {
+                console.warn("localStorage write failed", e);
+            }
+        }
+
+        function resetToDefaultQuestions() {
+            localQuestions = JSON.parse(JSON.stringify(defaultSampleQuestions));
+            editingQuestionIndex = -1;
+            saveQuestionsToStorage();
+            render();
+            showNotification('Reset to CSSO default sample questions!');
+        }
+
+        let broadcastChannel = null;
+        try {
+            if (window.BroadcastChannel) {
+                broadcastChannel = new BroadcastChannel('csso_trivia_sync_channel');
+                broadcastChannel.onmessage = (event) => {
+                    if (event.data) {
+                        if (event.data.gameState) gameState = event.data.gameState;
+                        if (event.data.players) players = event.data.players;
+                        if (event.data.answers) allAnswers = event.data.answers;
+                        render();
+                    }
+                };
+            }
+        } catch (e) {
+            console.warn("BroadcastChannel error", e);
+        }
+
+        function syncStateBroadcast() {
+            if (broadcastChannel) {
+                broadcastChannel.postMessage({ gameState, players, answers: allAnswers });
+            }
+        }
+
+        function showNotification(msg) {
+            const toast = document.getElementById('toast-message');
+            const toastText = document.getElementById('toast-text');
+            if (toast && toastText) {
+                toastText.innerText = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+        }
+
+        function exportQuestionsJSON() {
+            const jsonStr = JSON.stringify(localQuestions, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `csso_trivia_questions_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showNotification('Questions exported as JSON file!');
+        }
+
+        function importQuestionsJSON(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        localQuestions = parsed;
+                        saveQuestionsToStorage();
+                        render();
+                        showNotification('Imported ' + parsed.length + ' questions successfully!');
+                    } else {
+                        showNotification('Invalid file format: Expected array of questions.');
+                    }
+                } catch (err) {
+                    showNotification('Error parsing JSON file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function render() {
+            const content = document.getElementById('content');
+            const spinner = document.getElementById('loading-spinner');
+            if (spinner) spinner.classList.add('opacity-0', 'pointer-events-none');
+
+            content.innerHTML = '';
+
+            // Update top header status badge
+            const statusBadge = document.getElementById('header-status-badge');
+            if (statusBadge) {
+                if (role === 'host') {
+                    statusBadge.innerHTML = `<i class="fa-solid fa-desktop text-amber-400"></i> Host View (${players.length} Players)`;
+                } else if (role === 'player') {
+                    statusBadge.innerHTML = `<i class="fa-solid fa-mobile-screen text-emerald-400"></i> Player View`;
+                } else {
+                    statusBadge.innerHTML = `<i class="fa-solid fa-circle-notch text-blue-400"></i> Main Menu`;
+                }
+            }
+
+            if (!role) {
+                renderRoleSelection(content);
+                return;
+            }
+
+            if (role === 'host') {
+                if (gameState.status === 'setup' || !gameState.status) renderHostSetup(content);
+                else if (gameState.status === 'lobby') renderLobby(content);
+                else if (gameState.status === 'playing') renderGame(content);
+                else if (gameState.status === 'round_ended') renderRoundEnded(content);
+                else if (gameState.status === 'game_ended') renderLeaderboard(content);
+            } else {
+                const myPlayerRecord = players.find(p => p.id === currentUser.uid);
+                if (!myPlayerRecord) renderPlayerJoin(content);
+                else if (gameState.status === 'setup' || gameState.status === 'lobby') renderLobby(content);
+                else if (gameState.status === 'playing') renderGame(content);
+                else if (gameState.status === 'round_ended') renderRoundEnded(content);
+                else if (gameState.status === 'game_ended') renderLeaderboard(content);
+            }
+        }
+
+        function renderRoleSelection(container) {
+            container.innerHTML = `
+                <div class="flex-grow flex flex-col items-center justify-center space-y-8 my-auto py-8">
+                    <div class="text-center space-y-3">
+                        <span class="bg-amber-500/20 text-amber-300 font-extrabold px-4 py-1.5 rounded-full text-xs uppercase tracking-widest border border-amber-500/40">
+                            Interactive Audience Giveaway
+                        </span>
+                        <h2 class="text-4xl sm:text-6xl font-black text-white tracking-tight">
+                            Welcome to <span class="csso-gold-gradient">CSSO Trivia</span>
+                        </h2>
+                        <p class="text-blue-200/80 max-w-md mx-auto text-base sm:text-lg">
+                            Test knowledge, compete with peers, and win round prizes live!
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+                        <button id="btn-select-host" class="btn-action flex-1 py-5 px-6 csso-gold-bg text-blue-950 font-black text-xl rounded-2xl shadow-xl hover:brightness-110 flex items-center justify-center space-x-3 border-2 border-amber-300">
+                            <i class="fa-solid fa-display text-2xl"></i>
+                            <span>Host Event</span>
+                        </button>
+                        <button id="btn-select-join" class="btn-action flex-1 py-5 px-6 bg-blue-900/60 hover:bg-blue-800/80 text-white font-bold text-xl rounded-2xl shadow-xl border border-blue-400/40 flex items-center justify-center space-x-3">
+                            <i class="fa-solid fa-mobile-screen-button text-2xl text-emerald-400"></i>
+                            <span>Join Player</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('btn-select-host').onclick = () => {
+                role = 'host';
+                gameState.status = 'setup';
+                gameState.quizData = localQuestions;
+                syncStateBroadcast();
+                render();
+            };
+
+            document.getElementById('btn-select-join').onclick = () => {
+                role = 'player';
+                render();
+            };
+        }
+
+        function renderHostSetup(container) {
+            container.innerHTML = `
+                <div class="flex flex-col h-full space-y-6">
+                    <!-- Top Toolbar with Auto-Saved Badge, Import/Export, and Reset Buttons -->
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-amber-500/30 pb-4">
+                        <div>
+                            <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Quiz Question Builder</h2>
+                            <p class="text-xs text-amber-200/70">Add, edit, reorder (⬆️/⬇️), and customize timer limits.</p>
+                        </div>
+                        
+                        <!-- Persistence Toolbar -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Persistent Badge -->
+                            <span class="bg-emerald-950/90 text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-500/50 flex items-center gap-1.5 shadow-md">
+                                <i class="fa-solid fa-circle-check text-emerald-400"></i> Auto-Saved in Browser
+                            </span>
+
+                            <button id="btn-export-json" class="btn-action bg-amber-500 hover:bg-amber-400 text-blue-950 font-black px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow border border-amber-300">
+                                <i class="fa-solid fa-download"></i> Export JSON
+                            </button>
+
+                            <label class="btn-action bg-blue-800 hover:bg-blue-700 text-amber-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow border border-blue-400/40 cursor-pointer">
+                                <i class="fa-solid fa-upload text-emerald-400"></i> Import JSON
+                                <input type="file" id="input-import-json" accept=".json" class="hidden">
+                            </label>
+
+                            <button id="btn-open-json-modal" class="btn-action bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-slate-700">
+                                <i class="fa-solid fa-code text-amber-400"></i> Raw JSON
+                            </button>
+
+                            <!-- Reset to Default Button -->
+                            <button id="btn-trigger-reset" class="btn-action bg-red-950/80 hover:bg-red-900 text-red-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-red-500/40">
+                                <i class="fa-solid fa-rotate-left"></i> Reset Defaults
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Question Input Form Card -->
+                    <div class="bg-slate-900/80 p-5 rounded-2xl border border-amber-500/30 space-y-4 shadow-lg">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-amber-400 text-lg flex items-center gap-2">
+                                <i class="fa-solid ${editingQuestionIndex >= 0 ? 'fa-pen-to-square' : 'fa-circle-plus'}"></i>
+                                <span>${editingQuestionIndex >= 0 ? `Edit Question #${editingQuestionIndex + 1}` : 'Add New Question'}</span>
+                            </h3>
+                            ${editingQuestionIndex >= 0 ? `
+                                <button id="btn-cancel-edit" class="text-xs text-slate-400 hover:text-white underline">Cancel Editing</button>
+                            ` : ''}
+                        </div>
+
+                        <input type="text" id="input-q-text" placeholder="Type trivia question prompt here..." class="w-full bg-slate-950 border border-blue-500/30 rounded-xl p-3.5 text-white placeholder-blue-300/40 focus:outline-none focus:border-amber-400 transition">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="flex items-center space-x-2 bg-slate-950 p-2 rounded-xl border border-blue-500/20">
+                                <span class="text-amber-400 font-black px-2">A</span>
+                                <input type="text" id="input-opt-0" placeholder="Option A" class="w-full bg-transparent text-white focus:outline-none text-sm">
+                            </div>
+                            <div class="flex items-center space-x-2 bg-slate-950 p-2 rounded-xl border border-blue-500/20">
+                                <span class="text-amber-400 font-black px-2">B</span>
+                                <input type="text" id="input-opt-1" placeholder="Option B" class="w-full bg-transparent text-white focus:outline-none text-sm">
+                            </div>
+                            <div class="flex items-center space-x-2 bg-slate-950 p-2 rounded-xl border border-blue-500/20">
+                                <span class="text-amber-400 font-black px-2">C</span>
+                                <input type="text" id="input-opt-2" placeholder="Option C" class="w-full bg-transparent text-white focus:outline-none text-sm">
+                            </div>
+                            <div class="flex items-center space-x-2 bg-slate-950 p-2 rounded-xl border border-blue-500/20">
+                                <span class="text-amber-400 font-black px-2">D</span>
+                                <input type="text" id="input-opt-3" placeholder="Option D" class="w-full bg-transparent text-white focus:outline-none text-sm">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                            <div class="flex-1">
+                                <label class="block text-xs font-semibold text-blue-200 mb-1">Correct Answer Choice:</label>
+                                <select id="select-correct-idx" class="w-full bg-slate-950 border border-blue-500/30 rounded-xl p-3 text-amber-300 font-bold focus:outline-none focus:border-amber-400 text-sm">
+                                    <option value="0">Option A is Correct</option>
+                                    <option value="1">Option B is Correct</option>
+                                    <option value="2">Option C is Correct</option>
+                                    <option value="3">Option D is Correct</option>
+                                </select>
+                            </div>
+                            <div class="w-full sm:w-36">
+                                <label class="block text-xs font-semibold text-blue-200 mb-1">Time Limit:</label>
+                                <select id="select-time-limit" class="w-full bg-slate-950 border border-blue-500/30 rounded-xl p-3 text-white font-semibold focus:outline-none focus:border-amber-400 text-sm">
+                                    <option value="10">10 Seconds</option>
+                                    <option value="15" selected>15 Seconds</option>
+                                    <option value="20">20 Seconds</option>
+                                    <option value="30">30 Seconds</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button id="btn-save-question" class="btn-action w-full py-3 px-6 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black rounded-xl shadow-md uppercase tracking-wider text-sm">
+                                    ${editingQuestionIndex >= 0 ? 'Update Question' : '+ Add Question'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Question Queue List with Reorder Controls -->
+                    <div class="flex-grow flex flex-col min-h-[200px]">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-bold text-blue-200 uppercase tracking-wider">Question Queue (${localQuestions.length}):</h4>
+                        </div>
+                        
+                        <div id="questions-list" class="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+                            ${localQuestions.length === 0 ? `
+                                <div class="text-center py-10 bg-slate-900/40 rounded-2xl border border-dashed border-slate-700 text-slate-400">
+                                    No questions in queue. Add one above or import a JSON file!
+                                </div>
+                            ` : localQuestions.map((q, idx) => `
+                                <div class="bg-slate-900/90 p-4 rounded-xl border border-blue-500/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md hover:border-amber-500/50 transition">
+                                    <div class="flex items-start space-x-3 flex-1">
+                                        <span class="bg-amber-500/20 text-amber-300 font-black px-2.5 py-1 rounded-lg text-sm border border-amber-500/30 shrink-0">
+                                            Q${idx + 1}
+                                        </span>
+                                        <div>
+                                            <p class="font-bold text-white text-sm sm:text-base">${q.text}</p>
+                                            <p class="text-xs text-emerald-400 font-medium mt-0.5">
+                                                <i class="fa-solid fa-circle-check mr-1"></i> Correct: ${q.options[q.correctIndex]}
+                                                <span class="text-slate-400 ml-2">(${q.timeLimit || 15}s timer)</span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Reorder & Action Controls -->
+                                    <div class="flex items-center space-x-1.5 self-end sm:self-center bg-slate-950 p-1.5 rounded-xl border border-slate-800 shrink-0">
+                                        <button data-reorder="up" data-idx="${idx}" class="btn-action w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-amber-300 rounded-lg text-xs" ${idx === 0 ? 'disabled' : ''} title="Move Up">
+                                            ⬆️
+                                        </button>
+                                        <button data-reorder="down" data-idx="${idx}" class="btn-action w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-amber-300 rounded-lg text-xs" ${idx === localQuestions.length - 1 ? 'disabled' : ''} title="Move Down">
+                                            ⬇️
+                                        </button>
+                                        <button data-action="edit" data-idx="${idx}" class="btn-action w-8 h-8 flex items-center justify-center bg-blue-900/80 hover:bg-blue-800 text-blue-200 rounded-lg text-xs" title="Edit Question">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button data-action="delete" data-idx="${idx}" class="btn-action w-8 h-8 flex items-center justify-center bg-red-900/80 hover:bg-red-800 text-red-200 rounded-lg text-xs" title="Delete Question">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Open Event Lobby Button -->
+                    <div class="pt-4 border-t border-amber-500/20">
+                        <button id="btn-open-lobby" class="btn-action w-full py-5 csso-gold-bg text-blue-950 font-black text-xl rounded-2xl shadow-xl hover:brightness-110 disabled:opacity-50 transition uppercase tracking-wider border-2 border-amber-300" ${localQuestions.length === 0 ? 'disabled' : ''}>
+                            Open Event Lobby & Display QR Code
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Export JSON Handler
+            document.getElementById('btn-export-json').onclick = exportQuestionsJSON;
+
+            // Import JSON File Input Handler
+            document.getElementById('input-import-json').onchange = (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    importQuestionsJSON(e.target.files[0]);
+                }
+            };
+
+            // Raw JSON Modal Handlers
+            document.getElementById('btn-open-json-modal').onclick = () => {
+                const modal = document.getElementById('json-modal');
+                const textarea = document.getElementById('json-textarea');
+                textarea.value = JSON.stringify(localQuestions, null, 2);
+                modal.classList.remove('hidden');
+            };
+
+            document.getElementById('btn-close-modal').onclick = () => {
+                document.getElementById('json-modal').classList.add('hidden');
+            };
+
+            document.getElementById('btn-copy-json').onclick = () => {
+                const textarea = document.getElementById('json-textarea');
+                textarea.select();
+                document.execCommand('copy');
+                showNotification('JSON copied to clipboard!');
+            };
+
+            document.getElementById('btn-apply-json').onclick = () => {
+                const textarea = document.getElementById('json-textarea');
+                try {
+                    const parsed = JSON.parse(textarea.value);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        localQuestions = parsed;
+                        saveQuestionsToStorage();
+                        document.getElementById('json-modal').classList.add('hidden');
+                        render();
+                        showNotification('Applied ' + parsed.length + ' questions successfully!');
+                    } else {
+                        showNotification('Expected a JSON array of questions.');
+                    }
+                } catch (err) {
+                    showNotification('Invalid JSON: ' + err.message);
+                }
+            };
+
+            // Reset Modal Handlers
+            document.getElementById('btn-trigger-reset').onclick = () => {
+                document.getElementById('reset-modal').classList.remove('hidden');
+            };
+            document.getElementById('btn-cancel-reset').onclick = () => {
+                document.getElementById('reset-modal').classList.add('hidden');
+            };
+            document.getElementById('btn-confirm-reset').onclick = () => {
+                document.getElementById('reset-modal').classList.add('hidden');
+                resetToDefaultQuestions();
+            };
+
+            // Populate form if currently editing
+            if (editingQuestionIndex >= 0 && localQuestions[editingQuestionIndex]) {
+                const q = localQuestions[editingQuestionIndex];
+                document.getElementById('input-q-text').value = q.text;
+                document.getElementById('input-opt-0').value = q.options[0] || '';
+                document.getElementById('input-opt-1').value = q.options[1] || '';
+                document.getElementById('input-opt-2').value = q.options[2] || '';
+                document.getElementById('input-opt-3').value = q.options[3] || '';
+                document.getElementById('select-correct-idx').value = q.correctIndex;
+                document.getElementById('select-time-limit').value = q.timeLimit || 15;
+
+                const cancelBtn = document.getElementById('btn-cancel-edit');
+                if (cancelBtn) {
+                    cancelBtn.onclick = () => {
+                        editingQuestionIndex = -1;
+                        renderHostSetup(container);
+                    };
+                }
+            }
+
+            // Save question button handler
+            document.getElementById('btn-save-question').onclick = () => {
+                const text = document.getElementById('input-q-text').value.trim();
+                const opts = [
+                    document.getElementById('input-opt-0').value.trim(),
+                    document.getElementById('input-opt-1').value.trim(),
+                    document.getElementById('input-opt-2').value.trim(),
+                    document.getElementById('input-opt-3').value.trim()
+                ];
+                const correctIndex = parseInt(document.getElementById('select-correct-idx').value);
+                const timeLimit = parseInt(document.getElementById('select-time-limit').value);
+
+                if (!text || opts.some(o => !o)) {
+                    showNotification('Please fill out the question prompt and all four choices.');
+                    return;
+                }
+
+                const qData = {
+                    id: editingQuestionIndex >= 0 ? localQuestions[editingQuestionIndex].id : 'q_' + Date.now(),
+                    text,
+                    options: opts,
+                    correctIndex,
+                    timeLimit
+                };
+
+                if (editingQuestionIndex >= 0) {
+                    localQuestions[editingQuestionIndex] = qData;
+                    editingQuestionIndex = -1;
+                } else {
+                    localQuestions.push(qData);
+                }
+
+                saveQuestionsToStorage();
+                showNotification('Question saved successfully!');
+                renderHostSetup(container);
+            };
+
+            // Reordering and Question List Click Events
+            document.getElementById('questions-list').onclick = (e) => {
+                const target = e.target.closest('button');
+                if (!target) return;
+
+                const idx = parseInt(target.getAttribute('data-idx'));
+                const reorder = target.getAttribute('data-reorder');
+                const action = target.getAttribute('data-action');
+
+                if (reorder === 'up' && idx > 0) {
+                    const temp = localQuestions[idx];
+                    localQuestions[idx] = localQuestions[idx - 1];
+                    localQuestions[idx - 1] = temp;
+                    saveQuestionsToStorage();
+                    renderHostSetup(container);
+                } else if (reorder === 'down' && idx < localQuestions.length - 1) {
+                    const temp = localQuestions[idx];
+                    localQuestions[idx] = localQuestions[idx + 1];
+                    localQuestions[idx + 1] = temp;
+                    saveQuestionsToStorage();
+                    renderHostSetup(container);
+                } else if (action === 'edit') {
+                    editingQuestionIndex = idx;
+                    renderHostSetup(container);
+                } else if (action === 'delete') {
+                    localQuestions.splice(idx, 1);
+                    if (editingQuestionIndex === idx) editingQuestionIndex = -1;
+                    saveQuestionsToStorage();
+                    renderHostSetup(container);
+                }
+            };
+
+            document.getElementById('btn-open-lobby').onclick = () => {
+                gameState.quizData = localQuestions;
+                gameState.status = 'lobby';
+                syncStateBroadcast();
+                render();
+            };
+        }
+
+        function renderPlayerJoin(container) {
+            container.innerHTML = `
+                <div class="flex-grow flex flex-col items-center justify-center space-y-6 my-auto max-w-sm mx-auto w-full text-center">
+                    <div class="w-20 h-20 csso-gold-bg rounded-3xl flex items-center justify-center text-blue-950 text-4xl shadow-xl mb-2 border-2 border-amber-300">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-black text-white">Join Giveaway</h2>
+                        <p class="text-sm text-blue-200/80">Enter your full name to compete for prizes.</p>
+                    </div>
+
+                    <div class="w-full space-y-4">
+                        <input type="text" id="player-name-input" placeholder="First & Last Name" class="w-full bg-slate-950 border-2 border-amber-500/50 rounded-2xl p-4 text-center text-xl text-white placeholder-blue-300/40 focus:outline-none focus:border-amber-400 shadow-inner font-semibold">
+                        <button id="btn-submit-player" class="btn-action w-full py-4 csso-gold-bg text-blue-950 font-black text-xl rounded-2xl shadow-xl hover:brightness-110 uppercase tracking-wider border-2 border-amber-300">
+                            Enter Lobby
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('btn-submit-player').onclick = () => {
+                const name = document.getElementById('player-name-input').value.trim();
+                if (!name) return;
+
+                const newPlayer = { id: currentUser.uid, name, joinedAt: Date.now() };
+                players.push(newPlayer);
+                syncStateBroadcast();
+                render();
+            };
+        }
+
+        function renderLobby(container) {
+            const isHost = role === 'host';
+
+            if (isHost) {
+                const baseUrl = window.location.origin + window.location.pathname;
+                const joinUrl = `${baseUrl}?join=true`;
+                const displayUrl = joinUrl.replace(/^https?:\/\//, '');
+
+                container.innerHTML = `
+                    <div class="flex flex-col h-full items-center text-center space-y-6">
+                        <div>
+                            <span class="bg-amber-500/20 text-amber-300 text-xs font-extrabold px-4 py-1.5 rounded-full border border-amber-500/40 uppercase tracking-widest">
+                                Live Lobby &bull; Scan or Visit Below
+                            </span>
+                            <h2 class="text-3xl sm:text-5xl font-black text-white mt-2">Join CSSO Trivia</h2>
+                        </div>
+
+                        <!-- QR Code & Link Box -->
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-6 sm:gap-10 bg-slate-900/90 p-6 sm:p-8 rounded-3xl border border-amber-500/30 w-full shadow-2xl">
+                            <div class="bg-white p-4 rounded-2xl shadow-xl border-4 border-amber-400">
+                                <div id="qrcode-box" class="w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center"></div>
+                            </div>
+                            <div class="text-center md:text-left space-y-3 max-w-sm">
+                                <p class="text-sm font-semibold text-blue-200 uppercase tracking-wider">Point Smartphone Camera At QR Code</p>
+                                <p class="text-xs text-slate-400">Or type this web address into browser:</p>
+                                <div class="bg-slate-950 py-3 px-4 rounded-xl border border-amber-500/30">
+                                    <p class="text-base sm:text-xl font-black text-amber-400 break-all select-all">${displayUrl}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Joined Player Counter -->
+                        <div class="flex items-center space-x-3 bg-blue-950 px-6 py-2.5 rounded-full border border-amber-500/40 shadow-inner">
+                            <i class="fa-solid fa-users text-amber-400 text-xl"></i>
+                            <span class="text-lg text-blue-100 font-bold">Attendees Joined:</span>
+                            <span class="text-3xl font-black text-amber-300">${players.length}</span>
+                        </div>
+
+                        <!-- Joined Players Roster -->
+                        <div class="flex-grow w-full overflow-y-auto max-h-[150px] bg-slate-950/60 rounded-2xl p-4 border border-slate-800">
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                ${players.length === 0 ? `
+                                    <p class="text-slate-500 italic py-4">Waiting for first player to scan QR code...</p>
+                                ` : players.map(p => `
+                                    <span class="bg-blue-900/80 text-blue-100 px-3.5 py-1.5 rounded-full font-bold text-sm border border-blue-400/30 shadow-sm flex items-center gap-1.5">
+                                        <i class="fa-solid fa-user text-xs text-amber-400"></i> ${p.name}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Start Game Button -->
+                        <div class="w-full pt-2">
+                            <button id="btn-start-game" class="btn-action w-full py-5 csso-gold-bg text-blue-950 font-black text-2xl rounded-2xl shadow-xl hover:brightness-110 disabled:opacity-50 transition uppercase tracking-wider border-2 border-amber-300" ${players.length === 0 ? 'disabled' : ''}>
+                                Start Game / Show Question 1
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Render QRCode asynchronously
+                setTimeout(() => {
+                    const box = document.getElementById('qrcode-box');
+                    if (box && typeof QRCode !== 'undefined') {
+                        box.innerHTML = '';
+                        new QRCode(box, {
+                            text: joinUrl,
+                            width: 180,
+                            height: 180,
+                            colorDark: "#0b192c",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                }, 50);
+
+                document.getElementById('btn-start-game').onclick = () => {
+                    const firstQ = gameState.quizData[0];
+                    const startTime = Date.now();
+                    gameState.status = 'playing';
+                    gameState.currentQuestionIndex = 0;
+                    gameState.questionStartTime = startTime;
+                    gameState.questionEndTime = startTime + ((firstQ.timeLimit || 15) * 1000);
+                    gameState.showAnswer = false;
+                    gameState.rollingWinner = false;
+                    gameState.roundWinner = null;
+                    syncStateBroadcast();
+                    render();
+                };
+            } else {
+                container.innerHTML = `
+                    <div class="flex-grow flex flex-col items-center justify-center text-center space-y-6 my-auto">
+                        <div class="w-24 h-24 bg-blue-950 border-4 border-amber-400 rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(245,158,11,0.4)] animate-bounce">
+                            <i class="fa-solid fa-circle-check text-amber-400 text-4xl"></i>
+                        </div>
+                        <div class="space-y-2">
+                            <h2 class="text-3xl font-black text-white">You are Checked In!</h2>
+                            <p class="text-lg text-amber-300 font-semibold">Look up at the main presentation screen.</p>
+                        </div>
+                        <div class="bg-slate-950 py-3 px-6 rounded-full border border-slate-800">
+                            <p class="text-sm text-blue-300 animate-pulse font-medium">Waiting for host to launch Question 1...</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderGame(container) {
+            const qIndex = gameState.currentQuestionIndex;
+            const question = gameState.quizData[qIndex];
+            if (!question) return;
+
+            const isHost = role === 'host';
+            const now = Date.now();
+            const timeLeft = Math.max(0, Math.ceil((gameState.questionEndTime - now) / 1000));
+            const hasAnswered = myAnswer !== null;
+
+            const optLabels = ['A', 'B', 'C', 'D'];
+            const optColors = [
+                'from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-blue-400',
+                'from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 border-emerald-400',
+                'from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 border-amber-400',
+                'from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 border-purple-400'
+            ];
+
+            container.innerHTML = `
+                <div class="flex flex-col h-full space-y-6">
+                    <!-- Timer & Question Progress Bar -->
+                    <div class="flex justify-between items-center text-sm font-bold border-b border-amber-500/20 pb-4">
+                        <span class="bg-blue-950 text-amber-300 px-4 py-1.5 rounded-full border border-amber-500/30">
+                            Question ${qIndex + 1} of ${gameState.quizData.length}
+                        </span>
+                        <div class="bg-slate-950 px-5 py-1.5 rounded-full border border-amber-500/40 flex items-center space-x-2">
+                            <i class="fa-solid fa-stopwatch text-amber-400 text-base"></i>
+                            <span id="countdown-timer" class="text-2xl font-black ${timeLeft <= 5 ? 'text-red-400 animate-ping' : 'text-amber-300'}">${timeLeft}s</span>
+                        </div>
+                    </div>
+
+                    <!-- Question Prompt -->
+                    <div class="text-center py-2">
+                        <h2 class="text-2xl sm:text-4xl font-extrabold text-white leading-tight">${question.text}</h2>
+                    </div>
+
+                    <!-- Answer Option Buttons -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow my-auto">
+                        ${question.options.map((opt, idx) => `
+                            <button 
+                                data-opt="${idx}" 
+                                class="opt-choice-btn btn-action p-5 sm:p-6 rounded-2xl text-left font-bold border-2 transition-all shadow-lg flex items-center space-x-4
+                                ${isHost ? 'bg-slate-900/60 border-slate-700 opacity-90 cursor-default' : 
+                                  hasAnswered ? 
+                                    (myAnswer === idx ? 'bg-amber-500 text-blue-950 border-amber-300 scale-[1.02] ring-4 ring-amber-400/30' : 'bg-slate-950 border-slate-800 opacity-40 cursor-not-allowed') :
+                                    `bg-gradient-to-r ${optColors[idx]} text-white hover:scale-[1.01]`
+                                }
+                                "
+                                ${isHost || hasAnswered || timeLeft === 0 ? 'disabled' : ''}
+                            >
+                                <span class="w-10 h-10 rounded-xl bg-black/30 flex items-center justify-center font-black text-xl shrink-0 border border-white/20">
+                                    ${optLabels[idx]}
+                                </span>
+                                <span class="text-base sm:text-xl flex-grow">${opt}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <!-- Bottom Status Indicator -->
+                    <div class="pt-2 text-center">
+                        ${isHost ? `
+                            <div class="bg-slate-950/80 py-3 rounded-xl border border-slate-800 text-xs sm:text-sm text-blue-200 font-semibold">
+                                Live response collection in progress...
+                            </div>
+                        ` : `
+                            <div class="h-10 flex items-center justify-center">
+                                ${hasAnswered ? `
+                                    <span class="bg-emerald-950 text-emerald-300 px-6 py-2 rounded-full font-bold text-sm border border-emerald-500/40 animate-pulse flex items-center gap-2">
+                                        <i class="fa-solid fa-lock"></i> Answer Choice Locked!
+                                    </span>
+                                ` : `
+                                    <span class="text-amber-300/80 text-xs font-semibold animate-pulse">Tap your answer above before time expires!</span>
+                                `}
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+
+            // Active Timer Loop
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const remain = Math.max(0, Math.ceil((gameState.questionEndTime - Date.now()) / 1000));
+                const timerEl = document.getElementById('countdown-timer');
+                if (timerEl) {
+                    timerEl.innerText = `${remain}s`;
+                    if (remain <= 5) {
+                        timerEl.classList.remove('text-amber-300');
+                        timerEl.classList.add('text-red-400');
+                    }
+                }
+
+                if (remain === 0) {
+                    clearInterval(timerInterval);
+                    document.querySelectorAll('.opt-choice-btn').forEach(b => b.disabled = true);
+
+                    if (isHost && !gameState.showAnswer) {
+                        setTimeout(() => {
+                            gameState.status = 'round_ended';
+                            gameState.showAnswer = true;
+                            syncStateBroadcast();
+                            render();
+                        }, 1000);
+                    }
+                }
+            }, 250);
+
+            // Handle Player Answer Submission
+            if (!isHost) {
+                document.querySelectorAll('.opt-choice-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        if (myAnswer !== null) return;
+                        const targetBtn = e.target.closest('button');
+                        const idx = parseInt(targetBtn.getAttribute('data-opt'));
+                        myAnswer = idx;
+
+                        const nowTime = Date.now();
+                        const responseTimeMs = nowTime - (gameState.questionStartTime || nowTime);
+
+                        allAnswers.push({
+                            userId: currentUser.uid,
+                            playerName: players.find(p => p.id === currentUser.uid)?.name || 'Player',
+                            qIndex: qIndex,
+                            answerIndex: idx,
+                            isCorrect: idx === question.correctIndex,
+                            submittedAt: nowTime,
+                            responseTimeMs: responseTimeMs
+                        });
+
+                        syncStateBroadcast();
+                        render();
+                    };
+                });
+            }
+        }
+
+        function renderRoundEnded(container) {
+            clearInterval(timerInterval);
+            myAnswer = null;
+
+            const qIndex = gameState.currentQuestionIndex;
+            const question = gameState.quizData[qIndex];
+            const isHost = role === 'host';
+
+            const correctThisRound = allAnswers.filter(a => a.qIndex === qIndex && a.isCorrect);
+            const correctPlayerNames = correctThisRound.map(a => a.playerName || 'Player');
+
+            container.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-between text-center space-y-6">
+                    <div>
+                        <span class="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-4 py-1.5 rounded-full border border-emerald-500/40 uppercase tracking-widest">
+                            Official Round Answer
+                        </span>
+                        <h3 class="text-2xl sm:text-3xl font-extrabold text-white mt-2">Correct Choice:</h3>
+                    </div>
+
+                    <!-- Glowing Correct Answer Banner -->
+                    <div class="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 p-6 sm:p-8 rounded-3xl border-4 border-emerald-300 shadow-[0_0_40px_rgba(16,185,129,0.5)]">
+                        <p class="text-3xl sm:text-5xl font-black text-white leading-tight">${question.options[question.correctIndex]}</p>
+                    </div>
+
+                    <!-- Round Winner Randomizer Wheel Container -->
+                    <div class="w-full max-w-lg bg-slate-900/90 border-2 border-amber-500/50 rounded-3xl p-6 shadow-2xl space-y-3 relative overflow-hidden">
+                        <h4 class="text-amber-400 font-extrabold text-lg uppercase tracking-wider">
+                            <i class="fa-solid fa-gift mr-1"></i> Round Prize Giveaway Draw
+                        </h4>
+                        <p class="text-xs text-slate-400">Randomly selected from ${correctPlayerNames.length} correct entry submissions</p>
+
+                        <div id="slot-display-box" class="h-20 bg-slate-950 rounded-2xl border border-amber-500/40 flex items-center justify-center text-2xl sm:text-4xl font-black text-white overflow-hidden shadow-inner">
+                            <span id="slot-display-text" class="${gameState.rollingWinner ? 'slot-rolling text-amber-300' : gameState.roundWinner ? 'slot-winner' : 'text-slate-500'}">
+                                ${gameState.roundWinner ? gameState.roundWinner.name : '???'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Host Controls -->
+                    <div class="w-full max-w-md pt-4 space-y-3">
+                        ${isHost && !gameState.rollingWinner && !gameState.roundWinner ? `
+                            <button id="btn-draw-winner" class="btn-action w-full py-5 csso-gold-bg text-blue-950 font-black text-2xl rounded-2xl shadow-xl hover:brightness-110 border-2 border-amber-300 uppercase tracking-wider">
+                                <i class="fa-solid fa-dice mr-2"></i> Draw Round Winner
+                            </button>
+                        ` : ''}
+
+                        ${isHost && gameState.roundWinner ? `
+                            ${qIndex < gameState.quizData.length - 1 ? `
+                                <button id="btn-next-question" class="btn-action w-full py-5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xl rounded-2xl shadow-xl uppercase tracking-wider border border-blue-400">
+                                    Next Question <i class="fa-solid fa-arrow-right ml-2"></i>
+                                </button>
+                            ` : `
+                                <button id="btn-show-podium" class="btn-action w-full py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-black text-2xl rounded-2xl shadow-xl uppercase tracking-widest border border-red-400">
+                                    🏆 Show Final Winners Podium
+                                </button>
+                            `}
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Active Randomizer Spinning effect
+            if (gameState.rollingWinner && !gameState.roundWinner) {
+                const textEl = document.getElementById('slot-display-text');
+                if (correctPlayerNames.length === 0) {
+                    if (textEl) textEl.innerText = 'No correct entries!';
+                    if (isHost) {
+                        gameState.rollingWinner = false;
+                        gameState.roundWinner = { name: 'No Winner This Round' };
+                        syncStateBroadcast();
+                        render();
+                    }
+                } else {
+                    let spinCounter = 0;
+                    const spinTimer = setInterval(() => {
+                        const randomName = correctPlayerNames[Math.floor(Math.random() * correctPlayerNames.length)];
+                        if (textEl) textEl.innerText = randomName;
+                        spinCounter++;
+                    }, 60);
+
+                    window._activeSpinTimer = spinTimer;
+                }
+            } else {
+                if (window._activeSpinTimer) clearInterval(window._activeSpinTimer);
+            }
+
+            if (isHost) {
+                const drawBtn = document.getElementById('btn-draw-winner');
+                if (drawBtn) {
+                    drawBtn.onclick = () => {
+                        gameState.rollingWinner = true;
+                        syncStateBroadcast();
+                        render();
+
+                        setTimeout(() => {
+                            let chosenWinner = { name: 'No Winner' };
+                            if (correctPlayerNames.length > 0) {
+                                const selectedName = correctPlayerNames[Math.floor(Math.random() * correctPlayerNames.length)];
+                                chosenWinner = { name: selectedName };
+                            }
+                            gameState.rollingWinner = false;
+                            gameState.roundWinner = chosenWinner;
+                            syncStateBroadcast();
+                            render();
+                        }, 3000);
+                    };
+                }
+
+                const nextBtn = document.getElementById('btn-next-question');
+                if (nextBtn) {
+                    nextBtn.onclick = () => {
+                        const nextIdx = qIndex + 1;
+                        const nextQ = gameState.quizData[nextIdx];
+                        const startTime = Date.now();
+                        gameState.status = 'playing';
+                        gameState.currentQuestionIndex = nextIdx;
+                        gameState.questionStartTime = startTime;
+                        gameState.questionEndTime = startTime + ((nextQ.timeLimit || 15) * 1000);
+                        gameState.showAnswer = false;
+                        gameState.rollingWinner = false;
+                        gameState.roundWinner = null;
+                        syncStateBroadcast();
+                        render();
+                    };
+                }
+
+                const podiumBtn = document.getElementById('btn-show-podium');
+                if (podiumBtn) {
+                    podiumBtn.onclick = () => {
+                        gameState.status = 'game_ended';
+                        syncStateBroadcast();
+                        render();
+                    };
+                }
+            }
+        }
+
+        function renderLeaderboard(container) {
+            const playerStats = {};
+            players.forEach(p => {
+                playerStats[p.id] = { name: p.name, correctCount: 0, totalSpeedMs: 0 };
+            });
+
+            allAnswers.forEach(ans => {
+                if (playerStats[ans.userId] && ans.isCorrect) {
+                    playerStats[ans.userId].correctCount += 1;
+                    playerStats[ans.userId].totalSpeedMs += (ans.responseTimeMs || 0);
+                }
+            });
+
+            const ranked = Object.values(playerStats).sort((a, b) => {
+                if (b.correctCount !== a.correctCount) {
+                    return b.correctCount - a.correctCount;
+                }
+                return a.totalSpeedMs - b.totalSpeedMs;
+            });
+
+            const top3 = [
+                ranked[0] || { name: '---', correctCount: 0 },
+                ranked[1] || { name: '---', correctCount: 0 },
+                ranked[2] || { name: '---', correctCount: 0 }
+            ];
+
+            container.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-between space-y-6 text-center">
+                    <div>
+                        <h2 class="text-4xl sm:text-6xl font-black csso-gold-gradient tracking-tight">Grand Winners</h2>
+                        <p class="text-sm sm:text-base text-blue-200/80">CSSO Trivia Giveaway Champions</p>
+                    </div>
+
+                    <!-- Winners Podium -->
+                    <div class="flex items-end justify-center gap-2 sm:gap-6 w-full max-w-xl my-auto pt-6">
+                        <!-- 2nd Place -->
+                        <div class="flex flex-col items-center flex-1">
+                            <span class="text-xs sm:text-sm font-bold text-slate-300 truncate w-full px-1">${top3[1].name}</span>
+                            <span class="text-xs text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full mb-2">${top3[1].correctCount} pts</span>
+                            <div class="w-full podium-2 rounded-t-2xl shadow-xl flex items-center justify-center border-t-2 border-slate-300 relative">
+                                <span class="text-3xl font-black text-slate-950/40">2</span>
+                            </div>
+                        </div>
+
+                        <!-- 1st Place -->
+                        <div class="flex flex-col items-center flex-1 -mt-8 z-10">
+                            <i class="fa-solid fa-crown text-4xl text-amber-300 mb-1 animate-bounce"></i>
+                            <span class="text-base sm:text-xl font-black text-amber-300 truncate w-full px-1">${top3[0].name}</span>
+                            <span class="text-xs text-amber-200 font-bold bg-amber-950 px-3 py-0.5 rounded-full mb-2 border border-amber-500/40">${top3[0].correctCount} pts</span>
+                            <div class="w-full podium-1 rounded-t-2xl shadow-2xl flex items-center justify-center border-t-4 border-amber-300 relative">
+                                <span class="text-5xl font-black text-slate-950/30">1</span>
+                            </div>
+                        </div>
+
+                        <!-- 3rd Place -->
+                        <div class="flex flex-col items-center flex-1">
+                            <span class="text-xs sm:text-sm font-bold text-amber-500 truncate w-full px-1">${top3[2].name}</span>
+                            <span class="text-xs text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full mb-2">${top3[2].correctCount} pts</span>
+                            <div class="w-full podium-3 rounded-t-2xl shadow-xl flex items-center justify-center border-t-2 border-amber-600 relative">
+                                <span class="text-2xl font-black text-slate-950/40">3</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${role === 'host' ? `
+                        <button onclick="window.location.search=''" class="btn-action py-4 px-10 bg-white text-blue-950 font-black text-lg rounded-2xl shadow-xl hover:bg-slate-100 uppercase tracking-wider">
+                            Return to Main Menu
+                        </button>
+                    ` : `
+                        <p class="text-xs text-slate-400 font-medium uppercase tracking-widest">Thank you for participating!</p>
+                    `}
+                </div>
+            `;
+
+            if (typeof confetti !== 'undefined') {
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0 } }), 400);
+                setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1 } }), 800);
+            }
+        }
+
+        // Explicit Startup Initialization
+        loadSavedQuestions();
+
+        window.onload = function () {
+            render();
+        };
+    </script>
+</body>
+</html>
