@@ -12,8 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- MQTT.js for Realtime WebSocket Cloud Relay across Cellular/Wi-Fi Networks -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+  <!-- PeerJS for WebRTC Standard Port 443 Cross-Network Sync -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -115,8 +115,8 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <span id="mqttStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-amber-900/60 text-amber-300 border border-amber-700">
-            <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Connecting Cloud...
+          <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
+            <i class="fa-solid fa-bolt mr-1"></i> Dual Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -221,9 +221,7 @@
             <p class="text-xs text-slate-400">Use ⬆️ / ⬇️ to reorder questions for the live presentation.</p>
           </div>
 
-          <div id="questionsList" class="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
-            <!-- Dynamic Questions Render Here -->
-          </div>
+          <div id="questionsList" class="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-1"></div>
         </div>
 
         <!-- LAUNCH GAME / LOBBY CONTROL SECTION AT BOTTOM -->
@@ -752,12 +750,13 @@
     let stageTimeRemaining = 0;
     let localPlayer = null;
 
-    // MQTT Realtime Cloud Client
-    let mqttClient = null;
-    const MQTT_BROKER = 'wss://broker.hivemq.com:8884/mqtt';
-    const TOPIC_JOIN = 'csso_trivia_2026/joins';
-    const TOPIC_RESP = 'csso_trivia_2026/responses';
-    const TOPIC_STATE = 'csso_trivia_2026/state';
+    // Dual-Engine Synchronizer Variables
+    const BROADCAST_NAME = 'csso_trivia_sync_2026';
+    const PEER_HOST_ID = 'csso_trivia_host_2026';
+    let broadcastChannel = null;
+    let peerInstance = null;
+    let peerHostConnList = [];
+    let peerPlayerConn = null;
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -765,72 +764,136 @@
       renderQuestionsList();
       updateQrCode();
 
-      // Check URL parameters for player access
+      // Determine view
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('join') === 'true') {
+      const isPlayerJoin = urlParams.get('join') === 'true';
+
+      initDualSyncEngine(!isPlayerJoin);
+
+      if (isPlayerJoin) {
         switchMainTab('player');
       }
-
-      // Initialize HiveMQ MQTT Cloud Relay
-      initMqttCloudSync();
     });
 
-    function initMqttCloudSync() {
-      try {
-        const clientId = 'csso_client_' + Math.random().toString(16).substr(2, 8);
-        mqttClient = mqtt.connect(MQTT_BROKER, { clientId, keepalive: 30 });
+    // ==================== HYBRID DUAL-SYNC ENGINE ====================
+    function initDualSyncEngine(isHost) {
+      // 1. Local BroadcastChannel
+      if (typeof BroadcastChannel !== 'undefined') {
+        broadcastChannel = new BroadcastChannel(BROADCAST_NAME);
+        broadcastChannel.onmessage = (e) => handleSyncEvent(e.data);
+      }
 
-        mqttClient.on('connect', () => {
-          const badge = document.getElementById('mqttStatusBadge');
-          if (badge) {
-            badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700";
-            badge.innerHTML = `<i class="fa-solid fa-wifi mr-1"></i> Cloud Synced`;
-          }
-
-          mqttClient.subscribe([TOPIC_JOIN, TOPIC_RESP, TOPIC_STATE], (err) => {
-            if (err) console.error("MQTT Subscribe Error:", err);
-          });
-        });
-
-        mqttClient.on('message', (topic, message) => {
+      // 2. Storage Event Listener (Fallback for dual windows)
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'csso_event_payload' && e.newValue) {
           try {
-            const data = JSON.parse(message.toString());
-            handleCloudMessage(topic, data);
-          } catch(e) {
-            console.warn("MQTT Message Parse Error:", e);
-          }
-        });
+            handleSyncEvent(JSON.parse(e.newValue));
+          } catch(err){}
+        }
+      });
 
-        mqttClient.on('error', (err) => {
-          console.warn("MQTT Error:", err);
-        });
+      // 3. PeerJS Cloud WebRTC over Standard Port 443
+      try {
+        if (typeof Peer !== 'undefined') {
+          if (isHost) {
+            peerInstance = new Peer(PEER_HOST_ID);
+            peerInstance.on('connection', (conn) => {
+              peerHostConnList.push(conn);
+              conn.on('data', (data) => handleSyncEvent(data));
+            });
+          } else {
+            peerInstance = new Peer();
+            peerInstance.on('open', () => {
+              peerPlayerConn = peerInstance.connect(PEER_HOST_ID);
+              peerPlayerConn.on('data', (data) => handleSyncEvent(data));
+            });
+          }
+        }
       } catch(e) {
-        console.warn("MQTT Init Exception:", e);
+        console.warn("PeerJS init error:", e);
       }
     }
 
-    function handleCloudMessage(topic, data) {
-      if (topic === TOPIC_JOIN) {
-        if (data && data.id && data.name) {
-          if (!registeredPlayers.some(p => p.id === data.id)) {
-            registeredPlayers.push({
-              id: data.id,
-              name: data.name,
-              score: 0,
-              totalTime: 0,
-              wonIndividual: false
-            });
-            updateLobbyPlayerCounts();
-          }
+    function sendSyncEvent(type, payload) {
+      const eventObj = { type, payload, timestamp: Date.now() };
+
+      // Dispatch 1: BroadcastChannel
+      if (broadcastChannel) {
+        broadcastChannel.postMessage(eventObj);
+      }
+
+      // Dispatch 2: Storage Event
+      try {
+        localStorage.setItem('csso_event_payload', JSON.stringify(eventObj));
+      } catch(e){}
+
+      // Dispatch 3: PeerJS Relays
+      if (peerHostConnList.length > 0) {
+        peerHostConnList.forEach(c => {
+          if (c && c.open) c.send(eventObj);
+        });
+      }
+      if (peerPlayerConn && peerPlayerConn.open) {
+        peerPlayerConn.send(eventObj);
+      }
+    }
+
+    function handleSyncEvent(eventObj) {
+      if (!eventObj || !eventObj.type) return;
+
+      const { type, payload } = eventObj;
+
+      if (type === 'PLAYER_JOINED') {
+        if (!registeredPlayers.some(p => p.id === payload.id)) {
+          registeredPlayers.push(payload);
+          updateLobbyPlayerCounts();
+
+          // If Host, acknowledge state back to joining player
+          sendSyncEvent('HOST_STATE_SYNC', {
+            playersCount: registeredPlayers.length,
+            qIndex: currentQIndex
+          });
         }
-      } else if (topic === TOPIC_RESP) {
-        if (data && data.playerId !== undefined && data.choiceIndex !== undefined) {
-          if (!currentResponses.some(r => r.playerId === data.playerId)) {
-            currentResponses.push(data);
-          }
+      } else if (type === 'RESPONSE_SUBMITTED') {
+        if (!currentResponses.some(r => r.playerId === payload.playerId)) {
+          currentResponses.push(payload);
         }
-      } else if (topic === TOPIC_STATE) {
-        handleGameStateUpdate(data);
+      } else if (type === 'GAME_RESET') {
+        registeredPlayers = [];
+        currentResponses = [];
+        roundWinnersLog = [];
+        updateLobbyPlayerCounts();
+        renderWinnersLog();
+
+        if (localPlayer) {
+          document.getElementById('playerGameplayCard').classList.add('hidden');
+          document.getElementById('playerRegisterCard').classList.remove('hidden');
+          localPlayer = null;
+        }
+      } else if (type === 'QUESTION_START') {
+        if (localPlayer) {
+          document.getElementById('playerWaitingScreen').classList.add('hidden');
+          document.getElementById('playerLockedScreen').classList.add('hidden');
+          document.getElementById('playerQuestionScreen').classList.remove('hidden');
+
+          document.getElementById('playerQNum').textContent = `Question ${payload.qIndex + 1}`;
+          document.getElementById('playerQPrompt').textContent = payload.text;
+          document.getElementById('playerTimer').textContent = `${payload.timeLimit}s`;
+
+          const grid = document.getElementById('playerButtonsGrid');
+          grid.innerHTML = payload.options.map((opt, idx) => `
+            <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3">
+              <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
+              <span>${escapeHtml(opt)}</span>
+            </button>
+          `).join('');
+        }
+      } else if (type === 'TIME_EXPIRED') {
+        if (localPlayer) {
+          document.getElementById('playerQuestionScreen').classList.add('hidden');
+          document.getElementById('playerLockedScreen').classList.add('hidden');
+          document.getElementById('playerWaitingScreen').classList.remove('hidden');
+        }
       }
     }
 
@@ -1140,7 +1203,7 @@
       roundWinnersLog = [];
       currentQIndex = 0;
 
-      publishMqtt(TOPIC_STATE, { status: 'LOBBY', timestamp: Date.now() });
+      sendSyncEvent('GAME_RESET', {});
 
       updateLobbyPlayerCounts();
       renderWinnersLog();
@@ -1155,7 +1218,7 @@
         roundWinnersLog = [];
         currentQIndex = 0;
 
-        publishMqtt(TOPIC_STATE, { status: 'LOBBY', timestamp: Date.now() });
+        sendSyncEvent('GAME_RESET', {});
 
         updateLobbyPlayerCounts();
         renderWinnersLog();
@@ -1226,14 +1289,11 @@
 
       showStageScreen('question');
 
-      // Publish to Cloud WebSocket
-      publishMqtt(TOPIC_STATE, {
-        status: 'QUESTION_LIVE',
+      sendSyncEvent('QUESTION_START', {
         qIndex: qIndex,
         text: q.text,
         options: q.options,
-        timeLimit: q.timeLimit,
-        timestamp: Date.now()
+        timeLimit: q.timeLimit
       });
 
       // Start Countdown
@@ -1280,7 +1340,7 @@
       document.getElementById('barCorrect').style.width = `${correctPct}%`;
       document.getElementById('barIncorrect').style.width = `${100 - correctPct}%`;
 
-      publishMqtt(TOPIC_STATE, { status: 'TIME_EXPIRED', correctIndex: q.correctIndex, timestamp: Date.now() });
+      sendSyncEvent('TIME_EXPIRED', { correctIndex: q.correctIndex });
 
       setTimeout(() => {
         spinPrizeRandomizer();
@@ -1431,8 +1491,7 @@
         wonIndividual: false
       };
 
-      // Publish Registration to Cloud
-      publishMqtt(TOPIC_JOIN, localPlayer);
+      sendSyncEvent('PLAYER_JOINED', localPlayer);
 
       document.getElementById('playerRegisterCard').classList.add('hidden');
       document.getElementById('playerGameplayCard').classList.remove('hidden');
@@ -1452,46 +1511,10 @@
         timeTaken: timeTaken
       };
 
-      publishMqtt(TOPIC_RESP, resp);
+      sendSyncEvent('RESPONSE_SUBMITTED', resp);
 
       document.getElementById('playerQuestionScreen').classList.add('hidden');
       document.getElementById('playerLockedScreen').classList.remove('hidden');
-    }
-
-    function handleGameStateUpdate(state) {
-      if (!localPlayer) return;
-
-      if (state.status === 'LOBBY' || state.status === 'GAME_RESET') {
-        document.getElementById('playerQuestionScreen').classList.add('hidden');
-        document.getElementById('playerLockedScreen').classList.add('hidden');
-        document.getElementById('playerWaitingScreen').classList.remove('hidden');
-      } else if (state.status === 'QUESTION_LIVE') {
-        document.getElementById('playerWaitingScreen').classList.add('hidden');
-        document.getElementById('playerLockedScreen').classList.add('hidden');
-        document.getElementById('playerQuestionScreen').classList.remove('hidden');
-
-        document.getElementById('playerQNum').textContent = `Question ${state.qIndex + 1}`;
-        document.getElementById('playerQPrompt').textContent = state.text;
-        document.getElementById('playerTimer').textContent = `${state.timeLimit}s`;
-
-        const grid = document.getElementById('playerButtonsGrid');
-        grid.innerHTML = state.options.map((opt, idx) => `
-          <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3">
-            <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
-            <span>${escapeHtml(opt)}</span>
-          </button>
-        `).join('');
-      } else if (state.status === 'TIME_EXPIRED') {
-        document.getElementById('playerQuestionScreen').classList.add('hidden');
-        document.getElementById('playerLockedScreen').classList.add('hidden');
-        document.getElementById('playerWaitingScreen').classList.remove('hidden');
-      }
-    }
-
-    function publishMqtt(topic, payload) {
-      if (mqttClient && mqttClient.connected) {
-        mqttClient.publish(topic, JSON.stringify(payload));
-      }
     }
 
     // ==================== NAVIGATION ====================
