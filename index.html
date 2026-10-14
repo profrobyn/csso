@@ -114,7 +114,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-tower-broadcast mr-1"></i> Cloud REST Sync Active
+            <i class="fa-solid fa-tower-broadcast mr-1"></i> Resilient Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -787,7 +787,10 @@
     let roundWinnersLog = []; // { qIndex, winnerPlayer }
     
     let currentQIndex = 0;
+    let activeGameState = 'LOBBY'; // 'LOBBY' | 'QUESTION' | 'RANDOMIZER' | 'WINNER'
     let stageTimerInterval = null;
+    let heartbeatInterval = null;
+    let playerPullInterval = null;
     let stageTimeRemaining = 0;
     let localPlayer = null;
 
@@ -874,7 +877,7 @@
       debugLog(`Sent test PING out to cloud room [${currentRoomId}]`, 'info');
     }
 
-    // ==================== FIREWALL-PROOF CLOUD SYNC ====================
+    // ==================== RESILIENT CLOUD SYNC & HEARTBEAT ====================
     function initSyncEngine() {
       if (typeof BroadcastChannel !== 'undefined') {
         try {
@@ -891,13 +894,14 @@
         }
       });
 
+      // SSE Listener
       try {
         const sseUrl = `${NTFY_BASE}${currentRoomId}/sse`;
         debugLog(`Connecting Cloud SSE -> ${sseUrl}`, 'info');
         const sse = new EventSource(sseUrl);
 
         sse.onopen = () => debugLog(`Cloud SSE Connection Established!`, 'success');
-        sse.onerror = () => debugLog(`SSE Connection Re-establishing...`, 'warn');
+        sse.onerror = () => debugLog(`SSE Re-establishing...`, 'warn');
         sse.onmessage = (event) => {
           try {
             const wrapper = JSON.parse(event.data);
@@ -911,6 +915,7 @@
         debugLog(`SSE Error: ${e.message}`, 'error');
       }
 
+      // Short Fallback Polling (1.5s)
       setInterval(() => {
         fetch(`${NTFY_BASE}${currentRoomId}/json?since=15s`)
           .then(res => res.text())
@@ -930,9 +935,20 @@
           })
           .catch(() => {});
       }, 1500);
+
+      // Player Active Pull Interval: Every 3s if player is waiting for host
+      playerPullInterval = setInterval(() => {
+        if (localPlayer) {
+          const waitingVisible = !document.getElementById('playerWaitingScreen').classList.contains('hidden');
+          if (waitingVisible) {
+            sendSyncEvent('REQUEST_STATE', { playerId: localPlayer.id });
+          }
+        }
+      }, 3000);
     }
 
-    function sendSyncEvent(type, payload) {
+    // Fail-Safe Network Publisher with Retries & Fallbacks
+    function sendSyncEvent(type, payload, retryCount = 0) {
       const eventObj = {
         type: type,
         payload: payload,
@@ -942,21 +958,44 @@
       };
 
       const bodyStr = JSON.stringify(eventObj);
-      debugLog(`Sending -> ${type}`, 'info');
+      if (retryCount === 0) {
+        debugLog(`Sending -> ${type}`, 'info');
+      }
 
+      // Local broadcasts
       if (broadcastChannel) {
         try { broadcastChannel.postMessage(eventObj); } catch(e){}
       }
       try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
 
+      // Attempt 1: Standard fetch
       fetch(`${NTFY_BASE}${currentRoomId}`, {
         method: 'POST',
         body: bodyStr
       }).then(res => {
-        if (res.ok) debugLog(`Cloud POST HTTP 200 (${type})`, 'success');
-        else debugLog(`Cloud POST HTTP ${res.status}`, 'error');
+        if (res.ok) {
+          debugLog(`Cloud POST HTTP ${res.status} (${type})`, 'success');
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
       }).catch(err => {
-        debugLog(`Cloud Publish Error: ${err.message}`, 'error');
+        debugLog(`Publish Attempt ${retryCount + 1} Error: ${err.message}`, 'warn');
+        
+        // Attempt 2: navigator.sendBeacon
+        if (navigator.sendBeacon) {
+          try {
+            navigator.sendBeacon(`${NTFY_BASE}${currentRoomId}`, bodyStr);
+          } catch(e){}
+        }
+
+        // Retry loop up to 3 times with backoff
+        if (retryCount < 3) {
+          setTimeout(() => {
+            sendSyncEvent(type, payload, retryCount + 1);
+          }, 400 * (retryCount + 1));
+        } else {
+          debugLog(`Cloud Publish Max Retries Exceeded for (${type})`, 'error');
+        }
       });
     }
 
@@ -981,6 +1020,17 @@
 
       if (type === 'PING_TEST') {
         debugLog(`Received Test PING from device [${senderId}]`, 'warn');
+      } else if (type === 'REQUEST_STATE') {
+        // If Host receives REQUEST_STATE, reply immediately with current state
+        if (activeGameState === 'QUESTION' && questions[currentQIndex]) {
+          const q = questions[currentQIndex];
+          sendSyncEvent('QUESTION_START', {
+            qIndex: currentQIndex,
+            text: q.text,
+            options: q.options,
+            timeLimit: stageTimeRemaining > 0 ? stageTimeRemaining : q.timeLimit
+          });
+        }
       } else if (type === 'PLAYER_JOINED') {
         if (payload && payload.id && payload.name) {
           if (!registeredPlayers.some(p => p.id === payload.id)) {
@@ -1003,6 +1053,7 @@
           }
         }
       } else if (type === 'GAME_RESET') {
+        activeGameState = 'LOBBY';
         registeredPlayers = [];
         currentResponses = [];
         roundWinnersLog = [];
@@ -1016,6 +1067,7 @@
         }
         debugLog(`Game Reset Event Received`, 'warn');
       } else if (type === 'QUESTION_START') {
+        activeGameState = 'QUESTION';
         if (localPlayer) {
           document.getElementById('playerWaitingScreen').classList.add('hidden');
           document.getElementById('playerLockedScreen').classList.add('hidden');
@@ -1047,6 +1099,7 @@
           document.getElementById('playerWaitingScreen').classList.remove('hidden');
         }
       } else if (type === 'WINNER_ANNOUNCED') {
+        activeGameState = 'WINNER';
         if (localPlayer && payload) {
           document.getElementById('playerQuestionScreen').classList.add('hidden');
           document.getElementById('playerLockedScreen').classList.add('hidden');
@@ -1380,10 +1433,13 @@
     }
 
     function launchGameAndReset() {
+      activeGameState = 'LOBBY';
       registeredPlayers = [];
       currentResponses = [];
       roundWinnersLog = [];
       currentQIndex = 0;
+
+      clearInterval(heartbeatInterval);
 
       sendSyncEvent('GAME_RESET', {});
 
@@ -1395,10 +1451,13 @@
 
     function wipeResponsesPrompt() {
       if (confirm("Wipe all player registrations, scores, and round winner records? (Your trivia questions will remain intact)")) {
+        activeGameState = 'LOBBY';
         registeredPlayers = [];
         currentResponses = [];
         roundWinnersLog = [];
         currentQIndex = 0;
+
+        clearInterval(heartbeatInterval);
 
         sendSyncEvent('GAME_RESET', {});
 
@@ -1451,6 +1510,7 @@
         return;
       }
 
+      activeGameState = 'QUESTION';
       currentQIndex = qIndex;
       currentResponses = [];
       const q = questions[qIndex];
@@ -1471,14 +1531,25 @@
 
       showStageScreen('question');
 
-      sendSyncEvent('QUESTION_START', {
+      const qPayload = {
         qIndex: qIndex,
         text: q.text,
         options: q.options,
         timeLimit: q.timeLimit
-      });
+      };
 
-      // Start Countdown
+      sendSyncEvent('QUESTION_START', qPayload);
+
+      // Start Host Resync Heartbeat Loop (Resends active question state every 2s)
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = setInterval(() => {
+        if (activeGameState === 'QUESTION') {
+          qPayload.timeLimit = stageTimeRemaining;
+          sendSyncEvent('QUESTION_START', qPayload);
+        }
+      }, 2000);
+
+      // Start Countdown Timer
       stageTimeRemaining = q.timeLimit;
       document.getElementById('stageTimer').textContent = `${stageTimeRemaining}s`;
 
@@ -1489,6 +1560,7 @@
 
         if (stageTimeRemaining <= 0) {
           clearInterval(stageTimerInterval);
+          clearInterval(heartbeatInterval);
           handleTimeExpired();
         }
       }, 1000);
@@ -1531,6 +1603,7 @@
 
     // ==================== STRICT ELIGIBILITY PRIZE RANDOMIZER ====================
     function spinPrizeRandomizer() {
+      activeGameState = 'RANDOMIZER';
       const q = questions[currentQIndex];
       
       const correctPlayerIds = currentResponses.filter(r => r.choiceIndex === q.correctIndex).map(r => r.playerId);
@@ -1587,6 +1660,7 @@
     }
 
     function showWinnerCard(winner) {
+      activeGameState = 'WINNER';
       showStageScreen('winner');
 
       const nameDisplay = document.getElementById('winnerNameDisplay');
