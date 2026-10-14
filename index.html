@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- PeerJS WebRTC Direct Peer Engine -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -114,7 +116,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-tower-broadcast mr-1"></i> Resilient Sync Active
+            <i class="fa-solid fa-[#000] fa-wifi mr-1"></i> WebRTC Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -787,18 +789,21 @@
     let roundWinnersLog = []; // { qIndex, winnerPlayer }
     
     let currentQIndex = 0;
-    let activeGameState = 'LOBBY'; // 'LOBBY' | 'QUESTION' | 'RANDOMIZER' | 'WINNER'
+    let activeGameState = 'LOBBY';
     let stageTimerInterval = null;
     let heartbeatInterval = null;
-    let playerPullInterval = null;
     let stageTimeRemaining = 0;
     let localPlayer = null;
 
     const myDeviceId = `dev_${Math.random().toString(36).substring(2, 8)}`;
     let currentRoomId = 'csso_trivia_2026';
-    const NTFY_BASE = 'https://ntfy.sh/';
     let broadcastChannel = null;
     let processedEventKeys = new Set();
+
+    // PeerJS WebRTC Direct Data Connections
+    let myPeer = null;
+    let hostPeerConn = null; // Used by Player to talk to Host
+    let playerPeerConns = []; // Used by Host to store connected Players
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -874,11 +879,12 @@
 
     function sendTestPing() {
       sendSyncEvent('PING_TEST', { message: 'Hello from device!' });
-      debugLog(`Sent test PING out to cloud room [${currentRoomId}]`, 'info');
+      debugLog(`Sent test PING out to room [${currentRoomId}]`, 'info');
     }
 
-    // ==================== RESILIENT CLOUD SYNC & HEARTBEAT ====================
+    // ==================== DIRECT WEBRTC SYNC ENGINE ====================
     function initSyncEngine() {
+      // 1. Same-Browser Tab BroadcastChannel
       if (typeof BroadcastChannel !== 'undefined') {
         try {
           broadcastChannel = new BroadcastChannel(`csso_chan_${currentRoomId}`);
@@ -888,67 +894,99 @@
         } catch(e){}
       }
 
+      // 2. Storage Event Bus Backup
       window.addEventListener('storage', (e) => {
         if (e.key === `csso_bus_${currentRoomId}` && e.newValue) {
           try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
         }
       });
 
-      // SSE Listener
-      try {
-        const sseUrl = `${NTFY_BASE}${currentRoomId}/sse`;
-        debugLog(`Connecting Cloud SSE -> ${sseUrl}`, 'info');
-        const sse = new EventSource(sseUrl);
-
-        sse.onopen = () => debugLog(`Cloud SSE Connection Established!`, 'success');
-        sse.onerror = () => debugLog(`SSE Re-establishing...`, 'warn');
-        sse.onmessage = (event) => {
-          try {
-            const wrapper = JSON.parse(event.data);
-            if (wrapper && wrapper.message) {
-              const payload = JSON.parse(wrapper.message);
-              processReceivedPayload(payload);
-            }
-          } catch(e){}
-        };
-      } catch(e) {
-        debugLog(`SSE Error: ${e.message}`, 'error');
-      }
-
-      // Short Fallback Polling (1.5s)
-      setInterval(() => {
-        fetch(`${NTFY_BASE}${currentRoomId}/json?since=15s`)
-          .then(res => res.text())
-          .then(text => {
-            if (!text) return;
-            const lines = text.trim().split('\n');
-            lines.forEach(line => {
-              if (!line) return;
-              try {
-                const wrapper = JSON.parse(line);
-                if (wrapper && wrapper.message) {
-                  const payload = JSON.parse(wrapper.message);
-                  processReceivedPayload(payload);
-                }
-              } catch(e){}
-            });
-          })
-          .catch(() => {});
-      }, 1500);
-
-      // Player Active Pull Interval: Every 3s if player is waiting for host
-      playerPullInterval = setInterval(() => {
-        if (localPlayer) {
-          const waitingVisible = !document.getElementById('playerWaitingScreen').classList.contains('hidden');
-          if (waitingVisible) {
-            sendSyncEvent('REQUEST_STATE', { playerId: localPlayer.id });
-          }
-        }
-      }, 3000);
+      // 3. WebRTC PeerJS Setup
+      initPeerJS();
     }
 
-    // Fail-Safe Network Publisher with Retries & Fallbacks
-    function sendSyncEvent(type, payload, retryCount = 0) {
+    function initPeerJS() {
+      const hostPeerId = `csso_host_${currentRoomId}`;
+
+      try {
+        // Try to initialize as Host first
+        myPeer = new Peer(hostPeerId);
+
+        myPeer.on('open', (id) => {
+          debugLog(`WebRTC Host Peer Established! ID: ${id}`, 'success');
+        });
+
+        // Host listens for incoming player WebRTC socket connections
+        myPeer.on('connection', (conn) => {
+          debugLog(`Player WebRTC connected directly: ${conn.peer}`, 'success');
+          playerPeerConns.push(conn);
+
+          conn.on('data', (data) => {
+            processReceivedPayload(data);
+          });
+
+          conn.on('close', () => {
+            playerPeerConns = playerPeerConns.filter(c => c !== conn);
+            debugLog(`Player WebRTC disconnected: ${conn.peer}`, 'warn');
+          });
+        });
+
+        myPeer.on('error', (err) => {
+          if (err.type === 'unavailable-id') {
+            // ID taken -> This tab is a Player, connect to Host Peer
+            debugLog(`Host Peer ID active. Initializing as WebRTC Player...`, 'info');
+            initPlayerPeer(hostPeerId);
+          } else {
+            debugLog(`WebRTC Error: ${err.type} - ${err.message}`, 'error');
+          }
+        });
+
+      } catch(e) {
+        debugLog(`PeerJS Initialization Error: ${e.message}`, 'error');
+      }
+    }
+
+    function initPlayerPeer(hostPeerId) {
+      if (myPeer && !myPeer.destroyed) myPeer.destroy();
+
+      myPeer = new Peer(); // Auto-generated ID for player
+      myPeer.on('open', (myId) => {
+        debugLog(`Player WebRTC Peer ID: ${myId}. Connecting to Host (${hostPeerId})...`, 'info');
+        connectToHostPeer(hostPeerId);
+      });
+
+      myPeer.on('error', (err) => {
+        debugLog(`Player WebRTC Error: ${err.type}`, 'error');
+      });
+    }
+
+    function connectToHostPeer(hostPeerId) {
+      if (!myPeer) return;
+
+      hostPeerConn = myPeer.connect(hostPeerId, { reliable: true });
+
+      hostPeerConn.on('open', () => {
+        debugLog(`WebRTC Connected directly to Host!`, 'success');
+        document.getElementById('playerStatusTag').textContent = "WebRTC Direct";
+        document.getElementById('playerStatusTag').className = "text-[10px] text-emerald-400 font-bold";
+
+        // Send Join payload if player registered
+        if (localPlayer) {
+          sendSyncEvent('PLAYER_JOINED', localPlayer);
+        }
+      });
+
+      hostPeerConn.on('data', (data) => {
+        processReceivedPayload(data);
+      });
+
+      hostPeerConn.on('close', () => {
+        debugLog(`WebRTC Host connection closed. Retrying...`, 'warn');
+        setTimeout(() => connectToHostPeer(hostPeerId), 2000);
+      });
+    }
+
+    function sendSyncEvent(type, payload) {
       const eventObj = {
         type: type,
         payload: payload,
@@ -958,45 +996,25 @@
       };
 
       const bodyStr = JSON.stringify(eventObj);
-      if (retryCount === 0) {
-        debugLog(`Sending -> ${type}`, 'info');
-      }
+      debugLog(`Sending -> ${type}`, 'info');
 
-      // Local broadcasts
+      // 1. Send via WebRTC Data Channels
+      if (hostPeerConn && hostPeerConn.open) {
+        try { hostPeerConn.send(eventObj); } catch(e){}
+      }
+      playerPeerConns.forEach(conn => {
+        if (conn && conn.open) {
+          try { conn.send(eventObj); } catch(e){}
+        }
+      });
+
+      // 2. Local Browser BroadcastChannel
       if (broadcastChannel) {
         try { broadcastChannel.postMessage(eventObj); } catch(e){}
       }
+
+      // 3. LocalStorage Event Bus
       try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
-
-      // Attempt 1: Standard fetch
-      fetch(`${NTFY_BASE}${currentRoomId}`, {
-        method: 'POST',
-        body: bodyStr
-      }).then(res => {
-        if (res.ok) {
-          debugLog(`Cloud POST HTTP ${res.status} (${type})`, 'success');
-        } else {
-          throw new Error(`HTTP ${res.status}`);
-        }
-      }).catch(err => {
-        debugLog(`Publish Attempt ${retryCount + 1} Error: ${err.message}`, 'warn');
-        
-        // Attempt 2: navigator.sendBeacon
-        if (navigator.sendBeacon) {
-          try {
-            navigator.sendBeacon(`${NTFY_BASE}${currentRoomId}`, bodyStr);
-          } catch(e){}
-        }
-
-        // Retry loop up to 3 times with backoff
-        if (retryCount < 3) {
-          setTimeout(() => {
-            sendSyncEvent(type, payload, retryCount + 1);
-          }, 400 * (retryCount + 1));
-        } else {
-          debugLog(`Cloud Publish Max Retries Exceeded for (${type})`, 'error');
-        }
-      });
     }
 
     function processReceivedPayload(eventObj) {
@@ -1011,7 +1029,7 @@
         processedEventKeys = new Set(arr.slice(50));
       }
 
-      debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId || 'unknown'}`, 'success');
+      debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId || 'peer'}`, 'success');
       handleSyncEvent(eventObj);
     }
 
@@ -1020,17 +1038,6 @@
 
       if (type === 'PING_TEST') {
         debugLog(`Received Test PING from device [${senderId}]`, 'warn');
-      } else if (type === 'REQUEST_STATE') {
-        // If Host receives REQUEST_STATE, reply immediately with current state
-        if (activeGameState === 'QUESTION' && questions[currentQIndex]) {
-          const q = questions[currentQIndex];
-          sendSyncEvent('QUESTION_START', {
-            qIndex: currentQIndex,
-            text: q.text,
-            options: q.options,
-            timeLimit: stageTimeRemaining > 0 ? stageTimeRemaining : q.timeLimit
-          });
-        }
       } else if (type === 'PLAYER_JOINED') {
         if (payload && payload.id && payload.name) {
           if (!registeredPlayers.some(p => p.id === payload.id)) {
@@ -1439,8 +1446,6 @@
       roundWinnersLog = [];
       currentQIndex = 0;
 
-      clearInterval(heartbeatInterval);
-
       sendSyncEvent('GAME_RESET', {});
 
       updateLobbyPlayerCounts();
@@ -1456,8 +1461,6 @@
         currentResponses = [];
         roundWinnersLog = [];
         currentQIndex = 0;
-
-        clearInterval(heartbeatInterval);
 
         sendSyncEvent('GAME_RESET', {});
 
@@ -1540,15 +1543,6 @@
 
       sendSyncEvent('QUESTION_START', qPayload);
 
-      // Start Host Resync Heartbeat Loop (Resends active question state every 2s)
-      clearInterval(heartbeatInterval);
-      heartbeatInterval = setInterval(() => {
-        if (activeGameState === 'QUESTION') {
-          qPayload.timeLimit = stageTimeRemaining;
-          sendSyncEvent('QUESTION_START', qPayload);
-        }
-      }, 2000);
-
       // Start Countdown Timer
       stageTimeRemaining = q.timeLimit;
       document.getElementById('stageTimer').textContent = `${stageTimeRemaining}s`;
@@ -1560,7 +1554,6 @@
 
         if (stageTimeRemaining <= 0) {
           clearInterval(stageTimerInterval);
-          clearInterval(heartbeatInterval);
           handleTimeExpired();
         }
       }, 1000);
