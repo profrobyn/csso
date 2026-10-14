@@ -114,7 +114,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-bolt mr-1"></i> Realtime SSE Active
+            <i class="fa-solid fa-bolt mr-1"></i> Dual Sync Engine Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -446,7 +446,7 @@
           </div>
           <div class="text-right">
             <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-emerald-400 font-bold">Connected & Registered</p>
+            <p id="playerStatusTag" class="text-[10px] text-amber-400 font-bold">Connecting...</p>
           </div>
         </div>
 
@@ -796,11 +796,17 @@
     let registrationAckReceived = false;
 
     const myDeviceId = `dev_${Math.random().toString(36).substring(2, 8)}`;
-    let currentRoomId = 'csso_trivia_2026';
+    let currentRoomId = 'trivia_2026';
     let isHost = true;
     let broadcastChannel = null;
     let processedEventKeys = new Set();
     let sseSource = null;
+
+    // Helper: Enforce single clean room topic format (e.g. csso_trivia_2026)
+    function getTopicName() {
+      let cleaned = currentRoomId.replace(/^csso_/g, '').replace(/^trivia_/g, '');
+      return `csso_trivia_${cleaned}`;
+    }
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -809,7 +815,8 @@
         currentRoomId = urlParams.get('room').toLowerCase().replace(/[^a-z0-9_]/g, '');
       }
 
-      document.getElementById('roomTagDisplay').textContent = `Room: ${currentRoomId}`;
+      const activeTopic = getTopicName();
+      document.getElementById('roomTagDisplay').textContent = `Topic: ${activeTopic}`;
 
       if (urlParams.get('join') === 'true') {
         isHost = false;
@@ -829,7 +836,7 @@
         sendSyncEvent('PHONE_CONNECTED', { deviceId: myDeviceId });
       }
 
-      // Throttled Host Heartbeat (Runs every 5 seconds, not 1s!)
+      // Throttled Host Heartbeat (Runs every 4 seconds)
       setInterval(() => {
         if (isHost) {
           sendSyncEvent('HOST_HEARTBEAT', {
@@ -838,22 +845,26 @@
             qIndex: currentQIndex
           });
         }
-      }, 5000);
+      }, 4000);
 
-      // Mobile Auto-Retry Registration Handshake
+      // Handshake Retry Loop for Smartphone
       setInterval(() => {
         if (!isHost && localPlayer && !registrationAckReceived) {
-          debugLog(`Re-transmitting PLAYER_JOINED payload (Auto-Handshake Retry)...`, 'warn');
+          debugLog(`Retrying PLAYER_JOINED handshake...`, 'warn');
           sendSyncEvent('PLAYER_JOINED', localPlayer);
         }
-      }, 3000);
+      }, 2500);
+
+      // Light Mobile HTTP Fallback Poll Loop (Runs every 2.5 seconds to guarantee network delivery)
+      setInterval(syncPollFallback, 2500);
 
       // Mobile Tab Focus & Wake Recovery
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-          debugLog(`Device resumed. Reconnecting SSE Stream...`, 'info');
+          debugLog(`Device resumed. Refreshing network stream...`, 'info');
           initSSESream();
-          if (!isHost && localPlayer) {
+          syncPollFallback();
+          if (!isHost && localPlayer && !registrationAckReceived) {
             sendSyncEvent('PLAYER_JOINED', localPlayer);
           }
         }
@@ -911,14 +922,16 @@
 
     function sendTestPing() {
       sendSyncEvent('PING_TEST', { message: 'Hello from device!' });
-      debugLog(`Sent test PING out to room [${currentRoomId}]`, 'info');
+      debugLog(`Sent test PING to topic [${getTopicName()}]`, 'info');
     }
 
-    // ==================== REALTIME SSE SYNC ENGINE ====================
+    // ==================== DUAL-CHANNEL REALTIME SYNC ENGINE ====================
     function initSyncEngine() {
+      const topic = getTopicName();
+
       if (typeof BroadcastChannel !== 'undefined') {
         try {
-          broadcastChannel = new BroadcastChannel(`csso_chan_${currentRoomId}`);
+          broadcastChannel = new BroadcastChannel(`csso_chan_${topic}`);
           broadcastChannel.onmessage = (e) => {
             if (e && e.data) processReceivedPayload(e.data);
           };
@@ -926,7 +939,7 @@
       }
 
       window.addEventListener('storage', (e) => {
-        if (e.key === `csso_bus_${currentRoomId}` && e.newValue) {
+        if (e.key === `csso_bus_${topic}` && e.newValue) {
           try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
         }
       });
@@ -939,8 +952,9 @@
         try { sseSource.close(); } catch(e){}
       }
 
-      const sseUrl = `https://ntfy.sh/csso_trivia_${currentRoomId}/sse`;
-      debugLog(`Connecting to Realtime SSE Stream: ${sseUrl}`, 'info');
+      const topic = getTopicName();
+      const sseUrl = `https://ntfy.sh/${topic}/sse`;
+      debugLog(`Connecting Realtime SSE Stream: ${sseUrl}`, 'info');
 
       try {
         sseSource = new EventSource(sseUrl);
@@ -956,19 +970,41 @@
         };
 
         sseSource.onerror = () => {
-          debugLog(`SSE Stream Notice: Reconnecting stream...`, 'warn');
+          debugLog(`SSE StreamNotice: Silent reconnect...`, 'warn');
         };
       } catch(e) {
-        debugLog(`SSE Not Supported. Falling back to HTTP polling.`, 'error');
+        debugLog(`SSE Unsupported. Operating on HTTP Poll fallback.`, 'warn');
       }
     }
 
+    async function syncPollFallback() {
+      const topic = getTopicName();
+      try {
+        const resp = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=12s`, { cache: 'no-store' });
+        if (resp.ok) {
+          const text = await resp.text();
+          const lines = text.trim().split('\n');
+          lines.forEach(line => {
+            if (!line) return;
+            try {
+              const item = JSON.parse(line);
+              if (item && item.message) {
+                const eventObj = JSON.parse(item.message);
+                processReceivedPayload(eventObj);
+              }
+            } catch(err){}
+          });
+        }
+      } catch(e){}
+    }
+
     async function sendSyncEvent(type, payload) {
+      const topic = getTopicName();
       const eventObj = {
         type: type,
         payload: payload,
         senderId: myDeviceId,
-        room: currentRoomId,
+        topic: topic,
         _ts: Date.now() + Math.random()
       };
 
@@ -978,16 +1014,13 @@
         debugLog(`Sending -> ${type}`, 'info');
       }
 
-      // 1. Publish via HTTP POST
+      // 1. Publish HTTP POST
       try {
-        const resp = await fetch(`https://ntfy.sh/csso_trivia_${currentRoomId}`, {
+        fetch(`https://ntfy.sh/${topic}`, {
           method: 'POST',
-          body: bodyStr
-        });
-
-        if (resp.status === 429) {
-          debugLog(`HTTP 429 Rate Limit hit! Backing off POST requests.`, 'error');
-        }
+          body: bodyStr,
+          headers: { 'Content-Type': 'text/plain' }
+        }).catch(() => {});
       } catch(e){}
 
       // 2. Local BroadcastChannel
@@ -996,7 +1029,7 @@
       }
 
       // 3. LocalStorage Bus
-      try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
+      try { localStorage.setItem(`csso_bus_${topic}`, bodyStr); } catch(e){}
     }
 
     function processReceivedPayload(eventObj) {
@@ -1054,7 +1087,11 @@
         if (!isHost && localPlayer && payload && payload.playerId === localPlayer.id) {
           registrationAckReceived = true;
           debugLog(`Host Confirmed Player Registration Handshake!`, 'success');
-          document.getElementById('playerStatusTag').textContent = "Connected & Verified";
+          const statusTag = document.getElementById('playerStatusTag');
+          if (statusTag) {
+            statusTag.textContent = "Verified & Ready";
+            statusTag.className = "text-[10px] text-emerald-400 font-bold";
+          }
         }
       } else if (type === 'HOST_HEARTBEAT') {
         if (!isHost && localPlayer && payload && Array.isArray(payload.playerIds)) {
@@ -1062,6 +1099,11 @@
             sendSyncEvent('PLAYER_JOINED', localPlayer);
           } else {
             registrationAckReceived = true;
+            const statusTag = document.getElementById('playerStatusTag');
+            if (statusTag) {
+              statusTag.textContent = "Verified & Ready";
+              statusTag.className = "text-[10px] text-emerald-400 font-bold";
+            }
           }
         }
       } else if (type === 'RESPONSE_SUBMITTED') {
@@ -1433,7 +1475,7 @@
       
       let joinUrl = rawUrl;
       if (!joinUrl.includes('room=')) {
-        joinUrl += (joinUrl.includes('?') ? '&' : '?') + `room=${currentRoomId}`;
+        joinUrl += (joinUrl.includes('?') ? '&' : '?') + `room=trivia_2026`;
       }
 
       const lobbyQr = document.getElementById('lobbyQrContainer');
