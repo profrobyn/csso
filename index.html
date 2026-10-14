@@ -1,520 +1,434 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en" class="h-full bg-[#0b192c] text-slate-100">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CSSO Interactive System & Raffle</title>
+  <title>CSSO Trivia Giveaway</title>
 
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Canvas Confetti CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
-  <!-- Inter Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
-
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
           colors: {
-            brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              400: '#818cf8',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-              900: '#312e81',
+            csso: {
+              navy: '#0b192c',
+              lightNavy: '#1e293b',
+              cardBg: '#112240',
+              gold: '#f59e0b',
+              goldHover: '#d97706',
+              accent: '#38bdf8',
             }
           },
-          animation: {
-            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'spin-slow': 'spin 8s linear infinite',
-            'bounce-gentle': 'bounce 1.5s infinite',
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
           }
         }
       }
     }
   </script>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
   <style>
-    /* Custom CSS Scrollbars & UI Enhancements */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b192c;
+      color: #f8fafc;
+    }
+
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
     }
     ::-webkit-scrollbar-track {
-      background: #090d16;
+      background: #0b192c;
     }
     ::-webkit-scrollbar-thumb {
-      background: #334155;
+      background: #1e293b;
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-    
-    .glass-card {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .glass-header {
-      background: rgba(10, 15, 29, 0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .slot-digit {
-      display: inline-block;
-      transition: transform 0.1s ease-in-out;
+      background: #334155;
     }
 
     .gold-glow {
       box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
     }
-    .silver-glow {
-      box-shadow: 0 0 25px rgba(148, 163, 184, 0.25);
+
+    .text-gradient-gold {
+      background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #b45309 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    .bronze-glow {
-      box-shadow: 0 0 25px rgba(217, 119, 6, 0.25);
+
+    .slot-box {
+      background: linear-gradient(180deg, #0b192c 0%, #1e293b 50%, #0b192c 100%);
+    }
+
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.92; transform: scale(1.02); }
+    }
+
+    .animate-pulse-slow {
+      animation: pulse-slow 3s infinite ease-in-out;
+    }
+
+    .hidden-panel {
+      display: none !important;
     }
   </style>
 </head>
-<body class="h-full flex flex-col font-sans overflow-x-hidden antialiased bg-slate-950 text-slate-100 selection:bg-brand-500 selection:text-white">
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-900">
 
-  <!-- Header Bar -->
-  <header class="glass-header sticky top-0 z-30 px-4 lg:px-8 py-3">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      
-      <!-- Logo & App Title -->
+  <header class="bg-[#112240]/90 backdrop-blur border-b border-amber-500/20 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
-          <i class="fa-solid fa-graduation-cap text-white text-lg"></i>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-amber-500/20">
+          <i class="fa-solid fa-award"></i>
         </div>
         <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="font-black text-lg tracking-tight text-white">CSSO Live</h1>
-            <span class="bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Response & Raffle</span>
-          </div>
-          <p class="text-xs text-slate-400">Prof. Robyn • Computer Science & Software Engineering</p>
+          <h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-gradient-gold flex items-center gap-2">
+            CSSO Trivia Giveaway
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              Live Host
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">California State Student Organization Event Portal</p>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <div class="bg-slate-900/90 p-1 rounded-2xl border border-slate-800 flex text-xs font-semibold overflow-x-auto">
-        <button id="nav-btn-presenter" onclick="switchTab('presenter')" class="px-3 py-1.5 rounded-xl transition-all text-white bg-brand-600 shadow flex items-center gap-2 shrink-0">
-          <i class="fa-solid fa-desktop"></i> <span>Presentation Stage</span>
-        </button>
-        <button id="nav-btn-dashboard" onclick="switchTab('dashboard')" class="px-3 py-1.5 rounded-xl transition-all text-slate-400 hover:text-white flex items-center gap-2 shrink-0">
-          <i class="fa-solid fa-sliders"></i> <span>Instructor Dashboard</span>
-        </button>
-        <button id="nav-btn-raffle" onclick="switchTab('raffle')" class="px-3 py-1.5 rounded-xl transition-all text-slate-400 hover:text-white flex items-center gap-2 shrink-0 relative">
-          <i class="fa-solid fa-ticket text-amber-400"></i> <span>Raffle Draw</span>
-          <span id="raffle-badge" class="hidden bg-amber-500 text-slate-950 font-extrabold text-[9px] px-1.5 py-0.2 rounded-full">New</span>
-        </button>
-        <button id="nav-btn-leaderboard" onclick="switchTab('leaderboard')" class="px-3 py-1.5 rounded-xl transition-all text-slate-400 hover:text-white flex items-center gap-2 shrink-0">
-          <i class="fa-solid fa-trophy text-amber-300"></i> <span>Leaderboard</span>
-        </button>
-        <button id="nav-btn-student" onclick="switchTab('student')" class="px-3 py-1.5 rounded-xl transition-all text-slate-400 hover:text-white flex items-center gap-2 shrink-0">
-          <i class="fa-solid fa-mobile-screen-button"></i> <span>Student View</span>
-        </button>
-      </div>
-
-      <!-- Header Action Buttons -->
-      <div class="flex items-center gap-2">
-        <!-- Generate Sample Participants Button -->
-        <button onclick="generateSampleParticipants()" class="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Instantly create mock students with participant number gaps for raffle testing">
-          <i class="fa-solid fa-users-gear"></i>
-          <span class="hidden sm:inline">+ Sample Data</span>
-        </button>
-
-        <!-- Wipe Responses & Data Button -->
-        <button onclick="openWipeModal()" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 active:scale-95" title="Clear all responses, participants, scores, and raffle winners">
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button id="wipeResponsesBtn" onclick="openWipeModal()" class="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 transition flex items-center gap-1.5 shadow-sm">
           <i class="fa-solid fa-trash-can"></i>
-          <span class="hidden sm:inline">Wipe Data</span>
+          <span>Wipe Responses</span>
         </button>
-      </div>
 
+        <div class="bg-[#0b192c] p-1 rounded-xl border border-slate-700/60 flex text-xs font-semibold">
+          <button id="tabHostNav" onclick="switchView('host')" class="px-3 py-1.5 rounded-lg transition bg-amber-500 text-slate-950 font-bold shadow-md">
+            <i class="fa-solid fa-desktop mr-1"></i> Host Panel
+          </button>
+          <button id="tabPlayerNav" onclick="switchView('player')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">
+            <i class="fa-solid fa-mobile-screen mr-1"></i> Player View
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- Main Workspace -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 flex flex-col">
-    
-    <!-- ========================================== -->
-    <!-- VIEW 1: PRESENTATION STAGE -->
-    <!-- ========================================== -->
-    <section id="view-presenter" class="view-section flex-1 flex flex-col gap-6">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- QR Code & Link Card -->
-        <div class="lg:col-span-4 glass-card rounded-3xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group">
-          <div class="absolute -right-12 -bottom-12 w-48 h-48 bg-brand-500/10 rounded-full blur-3xl group-hover:bg-brand-500/20 transition-all"></div>
-          
-          <div class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 border border-brand-500/20 px-3 py-1 rounded-full mb-4">
-            <i class="fa-solid fa-qrcode"></i> Scan to Participate
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <div id="hostView" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div class="flex flex-wrap gap-2">
+          <button onclick="setHostTab('control')" id="htab-control" class="host-tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 text-slate-950 shadow-md">
+            <i class="fa-solid fa-gamepad mr-2"></i>Live Control & Spin
+          </button>
+          <button onclick="setHostTab('questions')" id="htab-questions" class="host-tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-[#112240] text-slate-300 hover:bg-slate-800 border border-slate-700/50">
+            <i class="fa-solid fa-list-check mr-2"></i>Question Builder (<span id="qCountBadge">0</span>)
+          </button>
+          <button onclick="setHostTab('winners')" id="htab-winners" class="host-tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-[#112240] text-slate-300 hover:bg-slate-800 border border-slate-700/50">
+            <i class="fa-solid fa-trophy mr-2"></i>Winners Log
+          </button>
+          <button onclick="setHostTab('qr')" id="htab-qr" class="host-tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-[#112240] text-slate-300 hover:bg-slate-800 border border-slate-700/50">
+            <i class="fa-solid fa-qrcode mr-2"></i>Join URL & QR Code
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-[#112240] rounded-xl border border-slate-700/60 text-xs font-semibold text-slate-300">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Status: <strong id="gameStatusText" class="text-amber-400">JOINING PHASE</strong></span>
+        </div>
+      </div>
+
+      <div id="hostTabControl" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-[#112240] p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Registered Players</p>
+              <p id="statPlayerCount" class="text-3xl font-black text-amber-400 mt-1">0</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 text-xl border border-amber-500/20">
+              <i class="fa-solid fa-users"></i>
+            </div>
           </div>
 
-          <!-- Mandatory Exact QR Image Request -->
-          <div class="p-3 bg-white rounded-2xl shadow-2xl mb-4 transition transform group-hover:scale-105 duration-300">
-            <img 
-              id="qr-code-image"
-              src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fprofrobyn.github.io%2Fcsso%2F%3Fjoin%3Dtrue" 
-              alt="CSSO Join QR Code"
-              class="w-48 h-48 sm:w-52 sm:h-52 object-contain rounded-lg"
-              onerror="this.onerror=null; this.src='https://placehold.co/200x200/ffffff/0f172a?text=CSSO+QR';"
-            />
+          <div class="bg-[#112240] p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Current Question</p>
+              <p id="statQuestionProg" class="text-3xl font-black text-amber-400 mt-1">1 / 5</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 text-xl border border-amber-500/20">
+              <i class="fa-solid fa-circle-question"></i>
+            </div>
           </div>
 
-          <!-- Mandatory Exact Join Link & Copy Button -->
-          <p class="text-xs text-slate-400 mb-1">Direct Event Join Link:</p>
-          <div class="flex items-center gap-2 w-full max-w-xs">
-            <a 
-              id="exact-join-url"
-              href="https://profrobyn.github.io/csso/?join=true" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              class="flex-1 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl truncate transition"
-            >
-              profrobyn.github.io/csso/?join=true
-            </a>
-            <button 
-              onclick="copyJoinLink()" 
-              class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition active:scale-95 shrink-0" 
-              title="Copy Join Link to Clipboard"
-            >
-              <i class="fa-regular fa-copy"></i>
+          <div class="bg-[#112240] p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Submissions Received</p>
+              <p id="statResponseCount" class="text-3xl font-black text-amber-400 mt-1">0</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 text-xl border border-amber-500/20">
+              <i class="fa-solid fa-paper-plane"></i>
+            </div>
+          </div>
+
+          <div class="bg-[#112240] p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Correct Answers (M)</p>
+              <p id="statCorrectCount" class="text-3xl font-black text-emerald-400 mt-1">0</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xl border border-emerald-500/20">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-6">
+            <div class="bg-[#112240] p-6 rounded-2xl border border-slate-700/60 shadow-xl relative overflow-hidden">
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                  Question <span id="hostCurrentQNum">1</span>
+                </span>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs text-slate-400">Time Limit:</span>
+                  <span id="hostQTimeLimit" class="text-xs font-bold text-slate-200 px-2 py-0.5 rounded bg-slate-800">15s</span>
+                </div>
+              </div>
+
+              <h2 id="hostQuestionText" class="text-xl sm:text-2xl font-bold text-slate-100 mb-6 leading-snug">
+                Loading Trivia Question...
+              </h2>
+
+              <div id="hostOptionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6"></div>
+
+              <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
+                <div class="flex items-center gap-2">
+                  <button id="btnPrevQ" onclick="prevQuestion()" class="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold transition disabled:opacity-50">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Prev
+                  </button>
+                  <button id="btnNextQ" onclick="nextQuestion()" class="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold transition disabled:opacity-50">
+                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                  </button>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <button id="btnStartQuestion" onclick="startQuestionTimer()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-sm font-bold shadow-lg transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-play"></i> Start Question
+                  </button>
+
+                  <button id="btnRevealAnswer" onclick="revealAnswer()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-sm font-bold shadow-lg transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-eye"></i> Reveal Correct Answer
+                  </button>
+
+                  <button id="btnSpinRandomizer" onclick="spinRandomizer()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-sm font-black shadow-lg shadow-amber-500/20 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-dice"></i> Spin Prize Randomizer
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="randomizerStage" class="bg-[#112240] p-6 rounded-2xl border border-amber-500/30 gold-glow relative">
+              <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                  <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+                    <i class="fa-solid fa-dharmachakra"></i>
+                  </div>
+                  <h3 class="font-bold text-lg text-slate-100">Round Prize Randomizer Slot</h3>
+                </div>
+                <span class="text-xs text-slate-400">
+                  Total Correct Submissions (M): <strong id="randMVal" class="text-amber-400">0</strong>
+                </span>
+              </div>
+
+              <div class="slot-box rounded-2xl border border-amber-500/40 p-6 text-center shadow-inner relative overflow-hidden">
+                <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-2">
+                  Landing Number (R)
+                </p>
+                <div id="slotDisplayR" class="text-6xl sm:text-7xl font-black text-amber-400 tracking-wider my-2 font-mono drop-shadow">
+                  #--
+                </div>
+
+                <div id="slotExplanation" class="mt-4 p-3 rounded-xl bg-[#0b192c]/80 border border-slate-700 text-xs sm:text-sm text-slate-300 min-h-[50px] flex items-center justify-center">
+                  Press "Spin Prize Randomizer" to select a winner among correct respondents!
+                </div>
+              </div>
+
+              <div id="winnerResultCard" class="hidden mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-emerald-500 text-slate-950 font-black text-2xl flex items-center justify-center shrink-0">
+                    🏆
+                  </div>
+                  <div>
+                    <p class="text-xs font-semibold uppercase text-emerald-400">Round Winner Declared!</p>
+                    <p id="winnerResultName" class="text-lg font-black text-slate-100">Player Name</p>
+                    <p id="winnerResultDetail" class="text-xs text-slate-300 mt-0.5">Awarded to submission #1 (First time winner)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="bg-[#112240] p-6 rounded-2xl border border-slate-700/60 text-center">
+              <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Question Timer</span>
+              <div id="hostTimerText" class="text-5xl font-black text-amber-400 my-2 font-mono">
+                15s
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                <div id="hostTimerBar" class="bg-amber-500 h-2.5 rounded-full transition-all duration-1000" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <div class="bg-[#112240] p-5 rounded-2xl border border-slate-700/60 space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h3 class="font-bold text-sm text-slate-200">
+                  <i class="fa-solid fa-users-viewfinder text-amber-400 mr-1.5"></i>Live Submissions
+                </h3>
+                <span id="responseCountBadge" class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-bold border border-amber-500/30">
+                  0
+                </span>
+              </div>
+
+              <div id="hostSubmissionList" class="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
+                <p class="text-slate-500 italic text-center py-4">No submissions received for this question yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="hostTabQuestions" class="hidden space-y-6">
+        <div class="bg-[#112240] p-6 rounded-2xl border border-slate-700/60 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-extrabold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-pen-to-square text-amber-400"></i> Trivia Question Manager
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Create, reorder, edit, export, or import trivia questions. Changes automatically save to local storage.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openQuestionModal()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm shadow-md transition flex items-center gap-1.5">
+              <i class="fa-solid fa-plus"></i> Add Question
+            </button>
+            <button onclick="exportQuestionsJSON()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-download"></i> Export JSON
+            </button>
+            <label class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition cursor-pointer flex items-center gap-1.5">
+              <i class="fa-solid fa-upload"></i> Import JSON
+              <input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="importQuestionsJSON(event)">
+            </label>
+            <button onclick="openRawJsonModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-code"></i> Raw JSON
             </button>
           </div>
         </div>
 
-        <!-- Live Question Stage Display -->
-        <div class="lg:col-span-8 glass-card rounded-3xl p-6 lg:p-8 flex flex-col justify-between relative overflow-hidden">
-          <div>
-            <div class="flex items-center justify-between gap-4 mb-4">
-              <span id="presenter-q-badge" class="bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide">
-                Live Class Poll
-              </span>
-              
-              <div class="flex items-center gap-2">
-                <span id="live-participants-pill" class="text-xs bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-slate-300 font-mono">
-                  <i class="fa-solid fa-user-check text-emerald-400 mr-1"></i> <strong id="presenter-participant-count" class="text-white">0</strong> Joined
-                </span>
-              </div>
-            </div>
-
-            <h2 id="presenter-q-title" class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-snug mb-2">
-              Loading Poll...
-            </h2>
-            <p id="presenter-q-sub" class="text-xs sm:text-sm text-slate-400 mb-6">Select an answer on your device to join the response feedback.</p>
-          </div>
-
-          <!-- Dynamic Live Chart Area -->
-          <div id="presenter-chart-container" class="space-y-4 my-2 min-h-[180px]">
-            <!-- Injected via JavaScript -->
-          </div>
-
-          <!-- Footer controls for presentation -->
-          <div class="pt-4 mt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-4">
-            <div class="flex items-center gap-4">
-              <span>Total Responses: <strong id="presenter-q-total-votes" class="text-white">0</strong></span>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <button onclick="navigatePoll(-1)" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition" title="Previous Question">
-                <i class="fa-solid fa-chevron-left"></i>
-              </button>
-              <span id="presenter-poll-index" class="font-mono text-slate-300 px-2">1 of 1</span>
-              <button onclick="navigatePoll(1)" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition" title="Next Question">
-                <i class="fa-solid fa-chevron-right"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-
+        <div id="questionListContainer" class="space-y-4"></div>
       </div>
-    </section>
 
-    <!-- ========================================== -->
-    <!-- VIEW 2: INSTRUCTOR DASHBOARD -->
-    <!-- ========================================== -->
-    <section id="view-dashboard" class="view-section hidden flex-1 flex flex-col gap-6">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left: Question & Poll Management -->
-        <div class="lg:col-span-5 space-y-6">
-          <div class="glass-card rounded-3xl p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                  <i class="fa-solid fa-list-check text-brand-400"></i> Active Polls
-                </h3>
-                <p class="text-xs text-slate-400">Manage classroom interactive prompts</p>
-              </div>
-              <button onclick="openNewPollModal()" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow-lg shadow-brand-600/30">
-                + New Poll
-              </button>
+      <div id="hostTabWinners" class="hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-[#112240] p-6 rounded-2xl border border-slate-700/60 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-gifts text-amber-400"></i> Individual Round Winners Log
+              </h3>
+              <span class="text-xs text-slate-400">Rule: 1 Individual Prize per player max</span>
             </div>
 
-            <div id="dash-poll-list" class="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-              <!-- Dynamically populated poll items -->
+            <div id="winnersLogTable" class="space-y-3">
+              <p class="text-slate-500 italic text-sm py-6 text-center">No round winners declared yet. Spin the prize randomizer to award round prizes!</p>
+            </div>
+          </div>
+
+          <div class="bg-[#112240] p-6 rounded-2xl border border-slate-700/60 space-y-6">
+            <div>
+              <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-trophy text-amber-400"></i> Grand Leaderboard
+              </h3>
+              <p class="text-xs text-slate-400 mt-1">
+                Calculated by: 1) Most Correct Answers, 2) Fastest Cumulative Time.
+                <br><strong class="text-amber-400">Note:</strong> Previous individual winners ARE eligible to win in the Top 3!
+              </p>
+            </div>
+
+            <button onclick="triggerGrandPodium()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/20 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-crown text-slate-950"></i> Show Final Top 3 Podium
+            </button>
+
+            <div id="hostLeaderboardList" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+              <p class="text-slate-500 italic text-xs py-4 text-center">No scores recorded yet.</p>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Right: Participant Roster & Controls -->
-        <div class="lg:col-span-7 space-y-6">
-          <div class="glass-card rounded-3xl p-6">
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div>
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                  <i class="fa-solid fa-users text-cyan-400"></i> Participant Roster
-                </h3>
-                <p class="text-xs text-slate-400">Showing active student numbers, points & raffle status</p>
-              </div>
+      <div id="hostTabQR" class="hidden space-y-6">
+        <div class="bg-[#112240] p-6 rounded-2xl border border-slate-700/60">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div class="text-center md:text-left">
+              <h3 class="text-xl font-extrabold text-slate-100 flex items-center justify-center md:justify-start gap-2 mb-3">
+                <i class="fa-solid fa-qrcode text-amber-400"></i> Join URL & QR Code
+              </h3>
+              <p class="text-xs text-slate-400 mb-4">Players can join directly from the link below or scan the generated QR code.</p>
 
-              <div class="flex items-center gap-2">
-                <button onclick="generateSampleParticipants()" class="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold px-3 py-1.5 rounded-xl transition">
-                  <i class="fa-solid fa-shuffle mr-1"></i> Generate Mock Gaps
+              <div class="flex items-center gap-2 w-full max-w-md">
+                <a id="exactJoinUrl" href="https://profrobyn.github.io/csso/?join=true" target="_blank" rel="noopener noreferrer" class="flex-1 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl truncate transition">
+                  profrobyn.github.io/csso/?join=true
+                </a>
+                <button onclick="copyJoinLink()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-semibold transition">
+                  <i class="fa-regular fa-copy"></i>
                 </button>
               </div>
             </div>
 
-            <!-- Roster Table -->
-            <div class="overflow-x-auto max-h-[420px] overflow-y-auto border border-slate-800 rounded-2xl">
-              <table class="w-full text-left text-xs text-slate-300">
-                <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 sticky top-0">
-                  <tr>
-                    <th class="p-3"># ID</th>
-                    <th class="p-3">Participant Name</th>
-                    <th class="p-3 text-center">Score</th>
-                    <th class="p-3 text-center">Raffle Status</th>
-                    <th class="p-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="roster-table-body" class="divide-y divide-slate-800/60">
-                  <!-- Injected via JavaScript -->
-                </tbody>
-              </table>
-            </div>
-
-            <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-              <span id="roster-count-summary">0 Active Participants</span>
-              <span class="text-slate-500">Notice numeric gaps are present to test closest raffle draw!</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ========================================== -->
-    <!-- VIEW 3: RANDOM RAFFLE DRAW ROOM -->
-    <!-- ========================================== -->
-    <section id="view-raffle" class="view-section hidden flex-1 flex flex-col gap-6">
-      
-      <!-- Top Rules & Banner -->
-      <div class="bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-500/30 rounded-3xl p-5 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-xl shrink-0">
-            <i class="fa-solid fa-ticket"></i>
-          </div>
-          <div>
-            <h3 class="text-sm font-extrabold text-white">Random Winner Raffle Rules</h3>
-            <p class="text-xs text-slate-300">
-              1. If the drawn number has no match, the prize goes to the <strong>NEXT CLOSEST</strong> participant. <br>
-              2. <strong>One Raffle Prize Rule:</strong> Winners are marked and excluded from future random drawings (Leaderboard prizes exempt).
-            </p>
-          </div>
-        </div>
-
-        <div class="bg-slate-900/80 px-4 py-2 rounded-2xl border border-slate-800 text-xs font-mono text-amber-300">
-          Eligible Participants: <strong id="raffle-eligible-count" class="text-white">0</strong>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left: Stage Draw Controls & Slot Animation Box -->
-        <div class="lg:col-span-7 glass-card rounded-3xl p-6 lg:p-8 flex flex-col justify-between items-center text-center relative overflow-hidden">
-          
-          <div class="w-full">
-            <h3 class="text-lg font-black text-white uppercase tracking-wider mb-1">Random Prize Wheel</h3>
-            <p class="text-xs text-slate-400 mb-6">Enter a prize description and trigger the random number draw</p>
-
-            <!-- Prize Title Input -->
-            <div class="max-w-md mx-auto mb-6">
-              <label class="block text-xs font-semibold text-slate-300 mb-1 text-left">Prize Title</label>
-              <div class="relative">
-                <input 
-                  type="text" 
-                  id="raffle-prize-input" 
-                  value="CSSO Swag & Mechanical Keyboard" 
-                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-amber-400 transition"
-                  placeholder="e.g., $25 Amazon Gift Card"
-                />
-                <span class="absolute right-3 top-2.5 text-amber-400 text-sm">
-                  <i class="fa-solid fa-gift"></i>
-                </span>
+            <div class="flex justify-center">
+              <div class="p-3 bg-white rounded-2xl shadow-2xl">
+                <img id="qrCodeImage" alt="CSSO Join QR Code" class="w-52 h-52 sm:w-56 sm:h-56 object-contain rounded-lg" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fprofrobyn.github.io%2Fcsso%2F%3Fjoin%3Dtrue">
               </div>
             </div>
-
-            <!-- Number Draw Range & Controls -->
-            <div class="flex items-center justify-center gap-4 mb-6 text-xs text-slate-400">
-              <span>Range: <strong class="text-white">1</strong> to <strong id="raffle-max-range-label" class="text-white">100</strong></span>
-              <span class="text-slate-600">•</span>
-              <span>Closest Number Fallback: <strong class="text-emerald-400">Active</strong></span>
-            </div>
-
-            <!-- Big Animated Slot Digit Stage -->
-            <div class="my-6 p-8 bg-slate-950/90 border-2 border-slate-800 rounded-3xl shadow-inner relative max-w-md mx-auto">
-              <div class="text-xs font-mono uppercase tracking-widest text-slate-500 mb-2">Drawn Participant #</div>
-              <div id="slot-machine-display" class="font-mono text-6xl sm:text-7xl font-black text-amber-400 tracking-wider">
-                #???
-              </div>
-              <div id="slot-machine-status" class="text-xs text-slate-400 mt-3 font-semibold min-h-[18px]">
-                Ready to draw winner
-              </div>
-            </div>
-
-            <!-- Spin Draw Button -->
-            <button 
-              id="spin-draw-btn"
-              onclick="triggerRaffleDraw()" 
-              class="w-full max-w-md py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black text-base uppercase tracking-wider rounded-2xl shadow-xl shadow-amber-500/20 transition transform active:scale-95"
-            >
-              <i class="fa-solid fa-dice mr-2"></i> Draw Random Winner!
-            </button>
-          </div>
-
-        </div>
-
-        <!-- Right: Recent Raffle Winners History -->
-        <div class="lg:col-span-5 space-y-6">
-          <div class="glass-card rounded-3xl p-6">
-            <h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">
-              <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Raffle Winner Log
-            </h3>
-            <p class="text-xs text-slate-400 mb-4">History of random drawings & resolution logic</p>
-
-            <div id="raffle-history-list" class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-              <!-- Dynamically populated history -->
-            </div>
           </div>
         </div>
-
       </div>
+    </div>
 
-    </section>
-
-    <!-- ========================================== -->
-    <!-- VIEW 4: LEADERBOARD & OVERALL PRIZES -->
-    <!-- ========================================== -->
-    <section id="view-leaderboard" class="view-section hidden flex-1 flex flex-col gap-6">
-      
-      <!-- Top Notice Banner highlighting exemption rule -->
-      <div class="bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-emerald-500/20 border border-amber-500/40 rounded-3xl p-5 text-center">
-        <div class="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase mb-1">
-          <i class="fa-solid fa-star"></i> End-Of-Session Leaderboard Rule
-        </div>
-        <h2 class="text-lg font-black text-white">Overall Top 3 Podium Prizes</h2>
-        <p class="text-xs text-slate-300 max-w-2xl mx-auto mt-1">
-          Leaderboard prizes (1st, 2nd, and 3rd Overall) are <strong>EXEMPT</strong> from the one-prize limit! Every participant is eligible to win these grand podium prizes based on overall quiz score performance.
-        </p>
-      </div>
-
-      <!-- Top 3 Podium Stage -->
-      <div id="podium-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 my-2">
-        <!-- Injected via JavaScript -->
-      </div>
-
-      <!-- Full Scoreboard Table -->
-      <div class="glass-card rounded-3xl p-6">
-        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-          <i class="fa-solid fa-ranking-star text-amber-400"></i> Complete Class Scoreboard
-        </h3>
-
-        <div class="overflow-x-auto border border-slate-800 rounded-2xl">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
-              <tr>
-                <th class="p-3 text-center">Rank</th>
-                <th class="p-3">Participant #</th>
-                <th class="p-3">Name</th>
-                <th class="p-3 text-center">Quiz Score</th>
-                <th class="p-3 text-center">Raffle Status</th>
-              </tr>
-            </thead>
-            <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/60">
-              <!-- Injected via JavaScript -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ========================================== -->
-    <!-- VIEW 5: STUDENT DEVICE SIMULATOR -->
-    <!-- ========================================== -->
-    <section id="view-student" class="view-section hidden flex-1 flex flex-col items-center justify-center py-4">
-      <div class="w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
-        
-        <!-- Mobile Device Notch & Header -->
+    <div id="playerView" class="hidden">
+      <div class="max-w-md mx-auto bg-[#112240] border border-slate-700/60 rounded-3xl p-5 shadow-2xl">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-xs font-bold">
-              C
-            </div>
+            <div class="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 text-xs font-bold">C</div>
             <div>
               <h3 class="text-xs font-bold text-white">CSSO Live Portal</h3>
               <p class="text-[10px] text-slate-400">Student Response</p>
             </div>
           </div>
-
-          <div class="flex items-center gap-2">
-            <select id="student-identity-select" onchange="switchStudentIdentity(this.value)" class="bg-slate-900 border border-slate-700 text-white text-[11px] rounded-lg px-2 py-1 font-mono">
-              <!-- Options populated by JS -->
-            </select>
-          </div>
+          <select id="playerSelect" class="bg-slate-900 border border-slate-700 text-white text-[11px] rounded-lg px-2 py-1 font-mono">
+            <option value="">Select Player</option>
+          </select>
         </div>
 
-        <!-- Student View Content -->
-        <div id="student-interactive-container">
-          <!-- Injected via JS -->
-        </div>
-
+        <div id="playerInfoBox" class="space-y-4"></div>
       </div>
-    </section>
-
+    </div>
   </main>
 
-  <!-- ========================================== -->
-  <!-- MODAL 1: SAFETY WIPE CONFIRMATION MODAL -->
-  <!-- ========================================== -->
-  <div id="wipe-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4 transition-all">
-    <div class="glass-card max-w-md w-full rounded-3xl p-6 border border-red-500/30 shadow-2xl transform transition-all scale-95 opacity-0 duration-200" id="wipe-modal-card">
-      
+  <div id="wipeModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4 transition-all">
+    <div class="bg-[#112240] max-w-md w-full rounded-3xl p-6 border border-red-500/30 shadow-2xl transform transition-all scale-95 opacity-0 duration-200" id="wipeModalCard">
       <div class="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center text-xl mb-4">
         <i class="fa-solid fa-triangle-exclamation"></i>
       </div>
-
       <h3 class="text-xl font-black text-white mb-2">Wipe Responses & Reset?</h3>
       <p class="text-xs text-slate-300 leading-relaxed mb-6">
-        This action will permanently clear <strong class="text-white font-semibold">all submitted student answers, scores, raffle winner logs, and participant rosters</strong>. This resets the application to a clean state.
+        This action will permanently clear <strong class="text-white font-semibold">all submitted student answers, scores, raffle logs, and player rosters</strong>. This resets the application to a clean state.
       </p>
 
       <div class="flex items-center gap-3">
@@ -525,619 +439,629 @@
           Yes, Wipe Data
         </button>
       </div>
-
     </div>
   </div>
 
-  <!-- MODAL 2: RAFFLE WINNER REVEAL MODAL -->
-  <div id="winner-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden items-center justify-center p-4 transition-all">
-    <div class="glass-card max-w-lg w-full rounded-3xl p-8 border border-amber-500/40 shadow-2xl text-center relative overflow-hidden">
-      
-      <div class="w-20 h-20 rounded-3xl bg-amber-500/20 border border-amber-500/50 text-amber-400 flex items-center justify-center text-4xl mx-auto mb-4 gold-glow">
-        <i class="fa-solid fa-gift"></i>
-      </div>
-
-      <div class="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs px-3 py-1 rounded-full font-bold uppercase mb-2">
-        <i class="fa-solid fa-award"></i> Winner Announcement
-      </div>
-
-      <h2 id="winner-modal-name" class="text-3xl font-black text-white tracking-tight mb-1">
-        Winner Name
-      </h2>
-      <p id="winner-modal-num" class="text-sm font-mono font-bold text-amber-400 mb-4">
-        Participant #00
-      </p>
-
-      <!-- Resolution details box -->
-      <div id="winner-resolution-box" class="p-3 bg-slate-900/90 border border-slate-800 rounded-2xl text-xs text-slate-300 mb-6 text-left space-y-1 font-mono">
-        <!-- Injected via JS -->
-      </div>
-
-      <button onclick="closeWinnerModal()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition">
-        Continue Session
-      </button>
-
-    </div>
-  </div>
-
-  <!-- MODAL 3: NEW POLL CREATION -->
-  <div id="poll-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-    <div class="glass-card max-w-md w-full rounded-3xl p-6 border border-slate-700">
+  <div id="questionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="bg-[#112240] max-w-lg w-full rounded-3xl p-6 border border-slate-700/60">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-base font-bold text-white">Create New Poll</h3>
-        <button onclick="closeNewPollModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="text-base font-bold text-white">Create New Question</h3>
+        <button onclick="closeQuestionModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <form onsubmit="handleCreatePoll(event)" class="space-y-4">
+      <form onsubmit="handleCreateQuestion(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Poll Question</label>
-          <input type="text" id="poll-prompt-input" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" placeholder="e.g. What is time complexity of QuickSort?">
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Question Text</label>
+          <input type="text" id="qPromptInput" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" placeholder="e.g. Which CSS property controls text color?">
         </div>
 
         <div class="space-y-2">
           <label class="block text-xs font-semibold text-slate-300">Options</label>
-          <input type="text" class="poll-opt-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option A" required>
-          <input type="text" class="poll-opt-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option B" required>
-          <input type="text" class="poll-opt-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option C">
-          <input type="text" class="poll-opt-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option D">
+          <input type="text" class="q-option-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option A" required>
+          <input type="text" class="q-option-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option B" required>
+          <input type="text" class="q-option-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option C">
+          <input type="text" class="q-option-input w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white" placeholder="Option D">
         </div>
 
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-          <button type="button" onclick="closeNewPollModal()" class="px-3 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold">Create & Activate</button>
+          <button type="button" onclick="closeQuestionModal()" class="px-3 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-bold">Save Question</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script>
-    /* STORAGE KEYS */
-    const STORAGE_KEY_PARTICIPANTS = 'csso_participants_v3';
-    const STORAGE_KEY_POLLS = 'csso_polls_v3';
-    const STORAGE_KEY_RAFFLE_LOG = 'csso_raffle_log_v3';
-    const STORAGE_KEY_RESPONSES = 'csso_responses_v3';
+  <div id="rawJsonModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="bg-[#112240] max-w-2xl w-full rounded-3xl p-6 border border-slate-700/60">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-file-code text-amber-400"></i> Raw Questions JSON</h3>
+        <button onclick="closeRawJsonModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <textarea id="rawJsonTextarea" class="w-full h-72 bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs text-amber-300 focus:outline-none focus:border-amber-400"></textarea>
+      <div class="flex justify-between items-center gap-2 pt-4">
+        <button onclick="copyJsonToClipboard()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold">Copy JSON</button>
+        <button onclick="applyRawJson()" class="px-4 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-black">Apply & Save</button>
+      </div>
+    </div>
+  </div>
 
-    /* INITIAL DEFAULT POLLS */
-    const DEFAULT_POLLS = [
+  <script>
+    const STORAGE_KEY_QUESTIONS = 'csso_questions_v1';
+    const STORAGE_KEY_PLAYERS = 'csso_players_v1';
+    const STORAGE_KEY_RESPONSES = 'csso_responses_v1';
+    const STORAGE_KEY_WINNERS = 'csso_winners_v1';
+
+    const defaultQuestions = [
       {
-        id: 'p-1',
-        title: 'Which data structure offers O(1) average lookup time?',
-        options: ['Binary Search Tree', 'Hash Table', 'Linked List', 'Array'],
+        id: 'q1',
+        text: 'What does the abbreviation CSSO stand for in California Community Colleges?',
+        options: ['California Student Services Organization', 'Chief Student Services Officers', 'Community Support and Student Operations', 'Council of Student Service Overseers'],
         correctIndex: 1,
-        active: true
+        timeLimit: 15
       },
       {
-        id: 'p-2',
-        title: 'In Git, which command creates a new branch and switches to it immediately?',
-        options: ['git branch -new', 'git checkout -b', 'git commit -m', 'git push origin'],
+        id: 'q2',
+        text: 'How many accredited colleges are part of the California Community Colleges system?',
+        options: ['72 Colleges', '105 Colleges', '116 Colleges', '125 Colleges'],
+        correctIndex: 2,
+        timeLimit: 15
+      },
+      {
+        id: 'q3',
+        text: 'Which system is the largest higher education system in the United States?',
+        options: ['California State University (CSU)', 'University of California (UC)', 'California Community Colleges (CCC)', 'State University of New York (SUNY)'],
+        correctIndex: 2,
+        timeLimit: 15
+      },
+      {
+        id: 'q4',
+        text: 'In what year was the California Community Colleges Board of Governors officially created?',
+        options: ['1967', '1972', '1985', '1990'],
+        correctIndex: 0,
+        timeLimit: 15
+      },
+      {
+        id: 'q5',
+        text: 'What is a primary strategic goal of the CSSO Association?',
+        options: ['Managing campus parking permits', 'Advocating for student leadership, equity, and student success', 'Organizing intercollegiate basketball tournaments', 'Auditing state revenue taxes'],
         correctIndex: 1,
-        active: false
+        timeLimit: 15
       }
     ];
 
-    /* APPLICATION STATE */
-    let participants = [];
-    let polls = [];
-    let raffleLog = [];
+    const defaultPlayers = [
+      { id: 'p1', name: 'Alex Rivera', number: 3, score: 95, hasWonRound: false },
+      { id: 'p2', name: 'Brianna Chen', number: 7, score: 88, hasWonRound: false },
+      { id: 'p3', name: 'Carlos Gomez', number: 14, score: 72, hasWonRound: false },
+      { id: 'p4', name: 'Diana Prince', number: 22, score: 100, hasWonRound: false },
+      { id: 'p5', name: 'Ethan Hunt', number: 35, score: 65, hasWonRound: false },
+      { id: 'p6', name: 'Fiona Gallagher', number: 41, score: 91, hasWonRound: false },
+      { id: 'p7', name: 'George Clark', number: 58, score: 84, hasWonRound: false },
+      { id: 'p8', name: 'Hannah Abbott', number: 64, score: 78, hasWonRound: false },
+      { id: 'p9', name: 'Ian Malcolm', number: 79, score: 96, hasWonRound: false },
+      { id: 'p10', name: 'Julia Roberts', number: 88, score: 70, hasWonRound: false },
+      { id: 'p11', name: 'Kevin Flynn', number: 95, score: 82, hasWonRound: false }
+    ];
+
+    let questions = [];
+    let players = [];
     let responses = [];
-    let activePollId = 'p-1';
-    let currentStudentId = null;
+    let winners = [];
+    let currentQuestionIndex = 0;
+    let currentView = 'host';
+    let currentHostTab = 'control';
+    let timerInterval = null;
+    let timerSeconds = 15;
+    let playerIdSelected = null;
 
-    /* SOUND SYNTHESIZER (Web Audio API) */
-    function playAudioTone(freq, duration, type = 'sine') {
+    function loadPersistentData() {
       try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + duration);
-      } catch (e) {
-        // Audio fallback
-      }
-    }
+        const savedQuestions = localStorage.getItem(STORAGE_KEY_QUESTIONS);
+        const savedPlayers = localStorage.getItem(STORAGE_KEY_PLAYERS);
+        const savedResponses = localStorage.getItem(STORAGE_KEY_RESPONSES);
+        const savedWinners = localStorage.getItem(STORAGE_KEY_WINNERS);
 
-    function playFanfare() {
-      [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
-        setTimeout(() => playAudioTone(freq, 0.3, 'triangle'), idx * 120);
-      });
-    }
+        questions = savedQuestions ? JSON.parse(savedQuestions) : structuredClone(defaultQuestions);
+        players = savedPlayers ? JSON.parse(savedPlayers) : structuredClone(defaultPlayers);
+        responses = savedResponses ? JSON.parse(savedResponses) : [];
+        winners = savedWinners ? JSON.parse(savedWinners) : [];
 
-    function initSystemData() {
-      try {
-        const pData = localStorage.getItem(STORAGE_KEY_PARTICIPANTS);
-        const pollData = localStorage.getItem(STORAGE_KEY_POLLS);
-        const rLog = localStorage.getItem(STORAGE_KEY_RAFFLE_LOG);
-        const respData = localStorage.getItem(STORAGE_KEY_RESPONSES);
+        if (!questions.length) questions = structuredClone(defaultQuestions);
+        if (!players.length) players = structuredClone(defaultPlayers);
 
-        polls = pollData ? JSON.parse(pollData) : DEFAULT_POLLS;
-        raffleLog = rLog ? JSON.parse(rLog) : [];
-        responses = respData ? JSON.parse(respData) : [];
-
-        if (pData) {
-          participants = JSON.parse(pData);
-        } else {
-          // Generate default mock participants with intentional numeric gaps
-          generateSampleParticipants(false);
-        }
-
-        if (polls.length > 0) activePollId = polls[0].id;
-        if (participants.length > 0) currentStudentId = participants[0].id;
-
+        playerIdSelected = players[0]?.id || null;
       } catch (err) {
-        console.error('Failed to parse localStorage:', err);
-        generateSampleParticipants(false);
+        questions = structuredClone(defaultQuestions);
+        players = structuredClone(defaultPlayers);
+        responses = [];
+        winners = [];
       }
 
-      saveSystemData();
-      renderAllViews();
+      savePersistentData();
+      renderAll();
     }
 
-    function saveSystemData() {
+    function savePersistentData() {
       try {
-        localStorage.setItem(STORAGE_KEY_PARTICIPANTS, JSON.stringify(participants));
-        localStorage.setItem(STORAGE_KEY_POLLS, JSON.stringify(polls));
-        localStorage.setItem(STORAGE_KEY_RAFFLE_LOG, JSON.stringify(raffleLog));
+        localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(questions));
+        localStorage.setItem(STORAGE_KEY_PLAYERS, JSON.stringify(players));
         localStorage.setItem(STORAGE_KEY_RESPONSES, JSON.stringify(responses));
-      } catch (e) {
-        console.error('Storage error:', e);
+        localStorage.setItem(STORAGE_KEY_WINNERS, JSON.stringify(winners));
+      } catch (err) {
+        console.warn('Failed to save data', err);
       }
     }
 
-    /* GENERATE MOCK PARTICIPANTS WITH NUMERIC GAPS FOR CLOSEST-NUMBER TESTING */
-    function generateSampleParticipants(shouldSave = true) {
-      // Intentional gaps in numbers: e.g. 3, 7, 14, 22, 35, 41, 58, 64, 79, 88, 95
-      const mockList = [
-        { id: 'st-1', number: 3, name: 'Alex Rivera', score: 95, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-2', number: 7, name: 'Brianna Chen', score: 88, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-3', number: 14, name: 'Carlos Gomez', score: 72, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-4', number: 22, name: 'Diana Prince', score: 100, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-5', number: 35, name: 'Ethan Hunt', score: 65, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-6', number: 41, name: 'Fiona Gallagher', score: 91, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-7', number: 58, name: 'George Clark', score: 84, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-8', number: 64, name: 'Hannah Abbott', score: 78, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-9', number: 79, name: 'Ian Malcolm', score: 96, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-10', number: 88, name: 'Julia Roberts', score: 70, hasWonRaffle: false, prizesWon: [] },
-        { id: 'st-11', number: 95, name: 'Kevin Flynn', score: 82, hasWonRaffle: false, prizesWon: [] }
-      ];
-
-      participants = mockList;
-      if (!currentStudentId) currentStudentId = participants[0].id;
-
-      if (shouldSave) {
-        saveSystemData();
-        renderAllViews();
-        playAudioTone(600, 0.15);
-      }
+    function renderAll() {
+      renderHostStats();
+      renderQuestionPanel();
+      renderQuestionList();
+      renderSubmissionList();
+      renderWinnersLog();
+      renderLeaderboard();
+      renderPlayerView();
+      renderHostTabs();
+      renderTabButtons();
+      document.getElementById('qCountBadge').innerText = questions.length;
+      document.getElementById('exactJoinUrl').href = 'https://profrobyn.github.io/csso/?join=true';
+      document.getElementById('exactJoinUrl').textContent = 'profrobyn.github.io/csso/?join=true';
     }
 
-    function switchTab(tabName) {
-      playAudioTone(440, 0.05);
-      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-      
-      const target = document.getElementById(`view-${tabName}`);
-      if (target) target.classList.remove('hidden');
+    function renderHostStats() {
+      document.getElementById('statPlayerCount').innerText = players.length;
+      document.getElementById('statQuestionProg').innerText = `${currentQuestionIndex + 1} / ${questions.length || 1}`;
 
-      ['presenter', 'dashboard', 'raffle', 'leaderboard', 'student'].forEach(t => {
-        const btn = document.getElementById(`nav-btn-${t}`);
-        if (!btn) return;
-        if (t === tabName) {
-          btn.className = 'px-3 py-1.5 rounded-xl transition-all text-white bg-brand-600 shadow flex items-center gap-2 shrink-0';
+      const currentQ = questions[currentQuestionIndex] || questions[0];
+      const qResponses = responses.filter(r => r.questionId === currentQ?.id);
+      document.getElementById('statResponseCount').innerText = qResponses.length;
+      document.getElementById('responseCountBadge').innerText = qResponses.length;
+      document.getElementById('randMVal').innerText = qResponses.filter(r => r.isCorrect).length;
+      document.getElementById('statCorrectCount').innerText = qResponses.filter(r => r.isCorrect).length;
+    }
+
+    function renderHostTabs() {
+      const tabs = ['hostTabControl', 'hostTabQuestions', 'hostTabWinners', 'hostTabQR'];
+      tabs.forEach(tabId => {
+        const el = document.getElementById(tabId);
+        if (!el) return;
+        if (tabId === `hostTab${currentHostTab.charAt(0).toUpperCase() + currentHostTab.slice(1)}`) {
+          el.classList.remove('hidden');
         } else {
-          btn.className = 'px-3 py-1.5 rounded-xl transition-all text-slate-400 hover:text-white flex items-center gap-2 shrink-0';
+          el.classList.add('hidden');
         }
       });
 
-      renderAllViews();
+      document.querySelectorAll('.host-tab-btn').forEach(btn => {
+        const btnId = btn.id.replace('htab-', '');
+        const active = btnId === currentHostTab;
+        btn.className = `host-tab-btn px-4 py-2 rounded-lg text-sm font-semibold ${active ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-[#112240] text-slate-300 hover:bg-slate-800 border border-slate-700/50'}`;
+      });
     }
 
-    function renderAllViews() {
-      renderPresenterStage();
-      renderDashboard();
-      renderRaffleRoom();
-      renderLeaderboard();
-      renderStudentView();
-    }
-
-    function renderPresenterStage() {
-      const activePoll = polls.find(p => p.id === activePollId) || polls[0];
-      if (!activePoll) return;
-
-      document.getElementById('presenter-q-title').innerText = activePoll.title;
-      document.getElementById('presenter-participant-count').innerText = participants.length;
-
-      const pollResponses = responses.filter(r => r.pollId === activePoll.id);
-      document.getElementById('presenter-q-total-votes').innerText = pollResponses.length;
-
-      const pollIndex = polls.findIndex(p => p.id === activePoll.id);
-      document.getElementById('presenter-poll-index').innerText = `${pollIndex + 1} of ${polls.length}`;
-
-      const container = document.getElementById('presenter-chart-container');
-      const total = pollResponses.length;
-
-      container.innerHTML = activePoll.options.map((opt, idx) => {
-        const count = pollResponses.filter(r => r.optionIndex === idx).length;
-        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-        const colors = ['bg-indigo-500', 'bg-cyan-500', 'bg-emerald-500', 'bg-amber-500'];
-        const barColor = colors[idx % colors.length];
-
-        return `
-          <div>
-            <div class="flex justify-between text-xs font-medium text-slate-300 mb-1">
-              <span>${escapeHTML(opt)}</span>
-              <span class="font-mono text-slate-400"><strong class="text-white">${count}</strong> (${pct}%)</span>
-            </div>
-            <div class="w-full h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-0.5">
-              <div class="h-full rounded-full ${barColor} transition-all duration-500" style="width: ${pct}%"></div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderDashboard() {
-      // Polls list
-      const pollList = document.getElementById('dash-poll-list');
-      pollList.innerHTML = polls.map((p, idx) => {
-        const isActive = p.id === activePollId;
-        const respCount = responses.filter(r => r.pollId === p.id).length;
-        return `
-          <div class="p-3 rounded-2xl border ${isActive ? 'bg-brand-900/30 border-brand-500/50' : 'bg-slate-900/60 border-slate-800'} flex items-center justify-between gap-2">
-            <div class="truncate">
-              <h4 class="text-xs font-bold text-white truncate">${escapeHTML(p.title)}</h4>
-              <p class="text-[10px] text-slate-400">${respCount} responses</p>
-            </div>
-            ${isActive ? `
-              <span class="text-[10px] bg-brand-500/20 text-brand-300 border border-brand-500/30 px-2 py-0.5 rounded-full font-bold">ACTIVE</span>
-            ` : `
-              <button onclick="setActivePoll('${p.id}')" class="text-xs bg-slate-800 hover:bg-brand-600 px-2 py-1 rounded-lg text-slate-200">Launch</button>
-            `}
-          </div>
-        `;
-      }).join('');
-
-      // Roster table
-      const tbody = document.getElementById('roster-table-body');
-      tbody.innerHTML = participants.map(p => `
-        <tr class="hover:bg-slate-900/50 transition">
-          <td class="p-3 font-mono font-bold text-amber-400">#${p.number}</td>
-          <td class="p-3 font-semibold text-white">${escapeHTML(p.name)}</td>
-          <td class="p-3 text-center font-mono font-bold">${p.score} pts</td>
-          <td class="p-3 text-center">
-            ${p.hasWonRaffle ? `
-              <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] px-2 py-0.5 rounded-full font-bold" title="Prizes: ${p.prizesWon?.join(', ')}">
-                🏆 Won (${p.prizesWon ? p.prizesWon.length : 1})
-              </span>
-            ` : `
-              <span class="text-slate-500 text-[10px]">Eligible</span>
-            `}
-          </td>
-          <td class="p-3 text-right">
-            <button onclick="awardScore('${p.id}', 10)" class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 font-mono text-[10px]">+10 pts</button>
-          </td>
-        </tr>
-      `).join('');
-
-      document.getElementById('roster-count-summary').innerText = `${participants.length} Active Participants`;
-    }
-
-    /*
-      RAFFLE DRAW LOGIC:
-      - Host inputs prize title and max number range (1 to 100 or max participant ID).
-      - If drawn number is NOT an exact match for an eligible participant:
-        - Calculates Math.abs(p.number - drawnNumber) for all participants with hasWonRaffle === false.
-        - Resolves to the next closest participant. If tied distance, resolves to higher participant number.
-      - Sets hasWonRaffle = true for the winner.
-    */
-    function triggerRaffleDraw() {
-      const prizeTitle = document.getElementById('raffle-prize-input').value.trim() || 'CSSO Raffle Prize';
-      const eligible = participants.filter(p => !p.hasWonRaffle);
-
-      if (eligible.length === 0) {
-        alertModal('No Eligible Participants', 'All active participants have already won a random raffle prize!');
-        return;
-      }
-
-      const spinBtn = document.getElementById('spin-draw-btn');
-      spinBtn.disabled = true;
-      spinBtn.classList.add('opacity-50', 'cursor-not-allowed');
-
-      const maxRange = 100;
-      const slotDisplay = document.getElementById('slot-machine-display');
-      const slotStatus = document.getElementById('slot-machine-status');
-
-      // Randomly pick a drawn number between 1 and 100
-      const drawnNumber = Math.floor(Math.random() * maxRange) + 1;
-
-      // Slot machine animation tick loop
-      let ticks = 0;
-      const maxTicks = 20;
-      const timer = setInterval(() => {
-        ticks++;
-        const randomRoll = Math.floor(Math.random() * maxRange) + 1;
-        slotDisplay.innerText = `#${randomRoll}`;
-        playAudioTone(300 + Math.random() * 200, 0.03, 'square');
-
-        if (ticks >= maxTicks) {
-          clearInterval(timer);
-          slotDisplay.innerText = `#${drawnNumber}`;
-          
-          // RESOLUTION LOGIC
-          let winner = eligible.find(p => p.number === drawnNumber);
-          let matchType = 'exact';
-          let distance = 0;
-
-          if (!winner) {
-            matchType = 'closest';
-            let minDistance = Infinity;
-            let candidates = [];
-
-            eligible.forEach(p => {
-              const dist = Math.abs(p.number - drawnNumber);
-              if (dist < minDistance) {
-                minDistance = dist;
-                candidates = [p];
-              } else if (dist === minDistance) {
-                candidates.push(p);
-              }
-            });
-
-            // If tied distance, resolve consistently to higher participant number
-            candidates.sort((a, b) => b.number - a.number);
-            winner = candidates[0];
-            distance = minDistance;
-          }
-
-          // Mark winner
-          winner.hasWonRaffle = true;
-          winner.prizesWon = winner.prizesWon || [];
-          winner.prizesWon.push(prizeTitle);
-
-          // Log in history
-          raffleLog.unshift({
-            id: 'raf-' + Date.now(),
-            prize: prizeTitle,
-            drawnNumber: drawnNumber,
-            winnerName: winner.name,
-            winnerNumber: winner.number,
-            matchType: matchType,
-            distance: distance,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          });
-
-          saveSystemData();
-          renderAllViews();
-
-          // Trigger sound and confetti
-          playFanfare();
-          if (typeof confetti === 'function') {
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-          }
-
-          // Show celebration modal
-          showWinnerModal(winner, prizeTitle, drawnNumber, matchType, distance);
-
-          spinBtn.disabled = false;
-          spinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-          slotStatus.innerText = `Last Winner: ${winner.name} (#${winner.number})`;
-        }
-      }, 100);
-    }
-
-    function renderRaffleRoom() {
-      const eligibleCount = participants.filter(p => !p.hasWonRaffle).length;
-      document.getElementById('raffle-eligible-count').innerText = eligibleCount;
-
-      const logContainer = document.getElementById('raffle-history-list');
-      if (raffleLog.length === 0) {
-        logContainer.innerHTML = `<div class="text-xs text-slate-500 italic p-4 text-center">No drawings performed yet.</div>`;
-        return;
-      }
-
-      logContainer.innerHTML = raffleLog.map(item => `
-        <div class="p-3 bg-slate-900/80 border border-slate-800 rounded-2xl flex items-center justify-between text-xs">
-          <div>
-            <div class="font-bold text-white">${escapeHTML(item.prize)}</div>
-            <div class="text-[10px] text-slate-400 mt-0.5">
-              Drawn: <strong class="text-amber-400 font-mono">#${item.drawnNumber}</strong> • 
-              ${item.matchType === 'exact' ? 
-                '<span class="text-emerald-400 font-bold">Exact Match</span>' : 
-                `<span class="text-cyan-400 font-bold">Closest Fallback (+/-${item.distance})</span>`}
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="font-bold text-amber-300 font-mono">#${item.winnerNumber} ${escapeHTML(item.winnerName)}</div>
-            <div class="text-[9px] text-slate-500">${item.time}</div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    /*
-      LEADERBOARD PRIZES (1st, 2nd, 3rd Overall):
-      - Exempt from the one-prize restriction! Everyone is eligible based on top scores.
-    */
-    function renderLeaderboard() {
-      // Sort participants by score descending
-      const sorted = [...participants].sort((a, b) => b.score - a.score);
-
-      const podium = document.getElementById('podium-container');
-      const top3 = sorted.slice(0, 3);
-
-      if (top3.length === 0) {
-        podium.innerHTML = `<div class="col-span-3 text-center text-xs text-slate-500 py-6">No participants logged.</div>`;
+    function renderTabButtons() {
+      const hostBtn = document.getElementById('tabHostNav');
+      const playerBtn = document.getElementById('tabPlayerNav');
+      if (currentView === 'host') {
+        hostBtn.className = 'px-3 py-1.5 rounded-lg transition bg-amber-500 text-slate-950 font-bold shadow-md';
+        playerBtn.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition';
       } else {
-        const gold = top3[0];
-        const silver = top3[1];
-        const bronze = top3[2];
-
-        podium.innerHTML = `
-          <!-- 2nd Place Silver -->
-          ${silver ? `
-            <div class="glass-card rounded-3xl p-6 border border-slate-400/30 flex flex-col items-center text-center silver-glow order-2 md:order-1">
-              <div class="w-12 h-12 rounded-full bg-slate-400/20 text-slate-300 border border-slate-400/40 flex items-center justify-center font-black text-lg mb-2">2</div>
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">2nd Overall Podium</span>
-              <h3 class="text-lg font-black text-white mt-1">${escapeHTML(silver.name)}</h3>
-              <p class="text-xs font-mono font-bold text-amber-400">#${silver.number}</p>
-              <div class="mt-3 text-2xl font-black font-mono text-white">${silver.score} <span class="text-xs text-slate-400 font-normal">pts</span></div>
-              <span class="mt-2 text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">Eligible for 2nd Grand Prize</span>
-            </div>
-          ` : ''}
-
-          <!-- 1st Place Gold -->
-          ${gold ? `
-            <div class="glass-card rounded-3xl p-6 border border-amber-500/50 flex flex-col items-center text-center gold-glow order-1 md:order-2 transform lg:-translate-y-2">
-              <div class="w-14 h-14 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/50 flex items-center justify-center font-black text-2xl mb-2">1</div>
-              <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Grand Champion</span>
-              <h3 class="text-xl font-black text-white mt-1">${escapeHTML(gold.name)}</h3>
-              <p class="text-xs font-mono font-bold text-amber-400">#${gold.number}</p>
-              <div class="mt-3 text-3xl font-black font-mono text-amber-300">${gold.score} <span class="text-xs text-slate-400 font-normal">pts</span></div>
-              <span class="mt-2 text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">1st Overall Grand Prize Winner</span>
-            </div>
-          ` : ''}
-
-          <!-- 3rd Place Bronze -->
-          ${bronze ? `
-            <div class="glass-card rounded-3xl p-6 border border-amber-700/30 flex flex-col items-center text-center bronze-glow order-3">
-              <div class="w-12 h-12 rounded-full bg-amber-700/20 text-amber-500 border border-amber-700/40 flex items-center justify-center font-black text-lg mb-2">3</div>
-              <span class="text-[10px] font-bold text-amber-600 uppercase tracking-wider">3rd Overall Podium</span>
-              <h3 class="text-lg font-black text-white mt-1">${escapeHTML(bronze.name)}</h3>
-              <p class="text-xs font-mono font-bold text-amber-400">#${bronze.number}</p>
-              <div class="mt-3 text-2xl font-black font-mono text-white">${bronze.score} <span class="text-xs text-slate-400 font-normal">pts</span></div>
-              <span class="mt-2 text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">Eligible for 3rd Grand Prize</span>
-            </div>
-          ` : ''}
-        `;
+        hostBtn.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition';
+        playerBtn.className = 'px-3 py-1.5 rounded-lg transition bg-amber-500 text-slate-950 font-bold shadow-md';
       }
 
-      // Complete Scoreboard
-      const tbody = document.getElementById('leaderboard-table-body');
-      tbody.innerHTML = sorted.map((p, idx) => `
-        <tr class="hover:bg-slate-900/50 transition">
-          <td class="p-3 text-center font-bold font-mono text-slate-400">${idx + 1}</td>
-          <td class="p-3 font-mono font-bold text-amber-400">#${p.number}</td>
-          <td class="p-3 font-semibold text-white">${escapeHTML(p.name)}</td>
-          <td class="p-3 text-center font-mono font-bold text-emerald-400">${p.score}</td>
-          <td class="p-3 text-center">
-            ${p.hasWonRaffle ? `
-              <span class="text-[10px] text-amber-300">Raffle Winner (${p.prizesWon?.length || 1})</span>
-            ` : `
-              <span class="text-[10px] text-slate-500">No Raffle Win</span>
-            `}
-          </td>
-        </tr>
+      const hostView = document.getElementById('hostView');
+      const playerView = document.getElementById('playerView');
+      hostView.classList.toggle('hidden', currentView !== 'host');
+      playerView.classList.toggle('hidden', currentView !== 'player');
+    }
+
+    function renderQuestionPanel() {
+      const currentQ = questions[currentQuestionIndex] || questions[0];
+      if (!currentQ) return;
+
+      document.getElementById('hostCurrentQNum').innerText = currentQuestionIndex + 1;
+      document.getElementById('hostQuestionText').innerText = currentQ.text;
+      document.getElementById('hostQTimeLimit').innerText = `${currentQ.timeLimit || 15}s`;
+      document.getElementById('gameStatusText').innerText = currentQ ? 'QUESTION LIVE' : 'JOINING PHASE';
+      document.getElementById('hostTimerText').innerText = `${timerSeconds}s`;
+
+      const optionsGrid = document.getElementById('hostOptionsGrid');
+      optionsGrid.innerHTML = currentQ.options.map((opt, idx) => {
+        const isCorrect = idx === currentQ.correctIndex;
+        const isRevealed = currentQ.revealed;
+        return `
+          <div class="rounded-xl border ${isRevealed && isCorrect ? 'border-emerald-500 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 bg-slate-900/80 text-slate-200'} p-3 text-sm font-medium">
+            <span class="font-black text-xs text-amber-400 mr-2">${String.fromCharCode(65 + idx)}</span>
+            ${opt}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderQuestionList() {
+      const container = document.getElementById('questionListContainer');
+      if (!questions.length) {
+        container.innerHTML = '<p class="text-slate-500 italic">No questions yet.</p>';
+        return;
+      }
+
+      container.innerHTML = questions.map((q, idx) => `
+        <div class="bg-[#112240] p-4 rounded-2xl border ${idx === currentQuestionIndex ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-700/50'}">
+          <div class="flex flex-wrap justify-between gap-3 items-center">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-amber-400 font-bold">Question ${idx + 1}</p>
+              <h4 class="text-base font-bold text-slate-100 mt-1">${q.text}</h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="moveQuestion(${idx}, -1)" class="px-2 py-1 bg-slate-800 rounded-lg text-xs text-slate-200"><i class="fa-solid fa-arrow-up"></i></button>
+              <button onclick="moveQuestion(${idx}, 1)" class="px-2 py-1 bg-slate-800 rounded-lg text-xs text-slate-200"><i class="fa-solid fa-arrow-down"></i></button>
+              <button onclick="selectQuestion(${idx})" class="px-3 py-1.5 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold">Open</button>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300">
+            ${q.options.map((opt, i) => `<div class="rounded-lg border ${i === q.correctIndex ? 'border-emerald-500 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 bg-slate-900/60'} p-2">${opt}</div>`).join('')}
+          </div>
+        </div>
       `).join('');
     }
 
-    function renderStudentView() {
-      const select = document.getElementById('student-identity-select');
-      select.innerHTML = participants.map(p => `
-        <option value="${p.id}" ${p.id === currentStudentId ? 'selected' : ''}>
-          #${p.number} - ${escapeHTML(p.name)}
-        </option>
-      `).join('');
+    function renderSubmissionList() {
+      const currentQ = questions[currentQuestionIndex] || questions[0];
+      const qResponses = responses.filter(r => r.questionId === currentQ?.id);
+      const list = document.getElementById('hostSubmissionList');
+      if (!qResponses.length) {
+        list.innerHTML = '<p class="text-slate-500 italic text-center py-4">No submissions received for this question yet.</p>';
+        return;
+      }
 
-      const activeStudent = participants.find(p => p.id === currentStudentId) || participants[0];
-      const activePoll = polls.find(p => p.id === activePollId) || polls[0];
-      const container = document.getElementById('student-interactive-container');
-
-      if (!activeStudent || !activePoll) return;
-
-      const existingResp = responses.find(r => r.pollId === activePoll.id && r.studentId === activeStudent.id);
-
-      container.innerHTML = `
-        <div class="space-y-4">
-          <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex justify-between items-center text-xs">
+      list.innerHTML = qResponses.map(r => {
+        const player = players.find(p => p.id === r.playerId);
+        const label = player ? `${player.name} (#${player.number})` : 'Unknown Player';
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
             <div>
-              <span class="text-slate-400 text-[10px]">Logged in as:</span>
-              <div class="font-bold text-white">${escapeHTML(activeStudent.name)} <span class="text-amber-400 font-mono">(#${activeStudent.number})</span></div>
+              <div class="font-bold text-slate-100">${label}</div>
+              <div class="text-[10px] text-slate-400">Answered: ${r.answerText}</div>
             </div>
-            <div class="text-right font-mono font-bold text-emerald-400 text-xs">
-              ${activeStudent.score} pts
+            <div class="text-xs font-bold ${r.isCorrect ? 'text-emerald-400' : 'text-rose-400'}">
+              ${r.isCorrect ? 'Correct' : 'Incorrect'}
             </div>
           </div>
+        `;
+      }).join('');
+    }
 
-          <div class="bg-brand-900/20 p-4 rounded-2xl border border-brand-500/30">
-            <span class="text-[10px] font-bold text-brand-300 uppercase tracking-wider">Live Question</span>
-            <h4 class="text-sm font-bold text-white mt-1">${escapeHTML(activePoll.title)}</h4>
+    function renderWinnersLog() {
+      const container = document.getElementById('winnersLogTable');
+      if (!winners.length) {
+        container.innerHTML = '<p class="text-slate-500 italic text-sm py-6 text-center">No round winners declared yet. Spin the prize randomizer to award round prizes!</p>';
+        return;
+      }
+
+      container.innerHTML = winners.map(w => `
+        <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3">
+          <div>
+            <div class="font-bold text-white">${w.prize}</div>
+            <div class="text-[10px] text-slate-400">Winner: ${w.playerName} • #${w.playerNumber}</div>
           </div>
-
-          ${existingResp ? `
-            <div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-center space-y-1">
-              <div class="text-emerald-400 font-bold text-xs"><i class="fa-solid fa-circle-check mr-1"></i> Answer Recorded!</div>
-              <p class="text-[11px] text-slate-300">You selected: <strong>${escapeHTML(activePoll.options[existingResp.optionIndex])}</strong></p>
-            </div>
-          ` : `
-            <div class="space-y-2">
-              ${activePoll.options.map((opt, idx) => `
-                <button 
-                  onclick="submitStudentAnswer('${activePoll.id}', ${idx})" 
-                  class="w-full text-left p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-brand-500 text-xs font-semibold text-slate-200 transition"
-                >
-                  ${escapeHTML(opt)}
-                </button>
-              `).join('')}
-            </div>
-          `}
+          <div class="text-xs bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-1 rounded-full font-bold">Round Winner</div>
         </div>
+      `).join('');
+    }
+
+    function renderLeaderboard() {
+      const sorted = [...players].sort((a, b) => b.score - a.score);
+      const list = document.getElementById('hostLeaderboardList');
+      list.innerHTML = sorted.map((p, idx) => `
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-slate-800">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-md bg-amber-500/20 text-amber-300 font-black text-xs flex items-center justify-center">${idx + 1}</div>
+            <div>
+              <div class="font-bold text-white">${p.name}</div>
+              <div class="text-[10px] text-slate-400">#${p.number}</div>
+            </div>
+          </div>
+          <div class="font-mono font-bold text-amber-400">${p.score}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderPlayerView() {
+      const select = document.getElementById('playerSelect');
+      select.innerHTML = players.map(p => `<option value="${p.id}">${p.name} (#${p.number})</option>`).join('');
+      if (!playerIdSelected || !players.some(p => p.id === playerIdSelected)) {
+        playerIdSelected = players[0]?.id || null;
+      }
+      select.value = playerIdSelected || '';
+      const currentPlayer = players.find(p => p.id === playerIdSelected) || players[0];
+      const q = questions[currentQuestionIndex] || questions[0];
+      const playerBox = document.getElementById('playerInfoBox');
+      if (!currentPlayer || !q) {
+        playerBox.innerHTML = '<p class="text-slate-500 italic">No player or question available.</p>';
+        return;
+      }
+
+      const submitted = responses.find(r => r.playerId === currentPlayer.id && r.questionId === q.id);
+
+      playerBox.innerHTML = `
+        <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 flex justify-between items-center text-xs">
+          <div>
+            <span class="text-slate-400 text-[10px]">Logged in as:</span>
+            <div class="font-bold text-white">${currentPlayer.name} <span class="text-amber-400 font-mono">(#${currentPlayer.number})</span></div>
+          </div>
+          <div class="text-right font-mono font-bold text-emerald-400 text-xs">${currentPlayer.score} pts</div>
+        </div>
+
+        <div class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30">
+          <span class="text-[10px] font-bold text-amber-300 uppercase tracking-wider">Live Question</span>
+          <h4 class="text-sm font-bold text-white mt-1">${q.text}</h4>
+        </div>
+
+        ${submitted ? `
+          <div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-center space-y-1">
+            <div class="text-emerald-400 font-bold text-xs"><i class="fa-solid fa-circle-check mr-1"></i> Answer Recorded!</div>
+            <p class="text-[11px] text-slate-300">You selected: <strong>${submitted.answerText}</strong></p>
+          </div>
+        ` : `
+          <div class="space-y-2">
+            ${q.options.map((option, index) => `
+              <button onclick="submitPlayerAnswer('${currentPlayer.id}', '${q.id}', '${option}', ${index})" class="w-full text-left p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500 text-xs font-semibold text-slate-200 transition">
+                ${option}
+              </button>
+            `).join('')}
+          </div>
+        `}
       `;
     }
 
-    function switchStudentIdentity(id) {
-      currentStudentId = id;
-      renderStudentView();
+    function setHostTab(tab) {
+      currentHostTab = tab;
+      renderHostTabs();
     }
 
-    function submitStudentAnswer(pollId, optionIndex) {
-      if (!currentStudentId) return;
+    function switchView(view) {
+      currentView = view;
+      renderTabButtons();
+    }
+
+    function selectQuestion(index) {
+      currentQuestionIndex = index;
+      renderAll();
+    }
+
+    function moveQuestion(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= questions.length) return;
+      const [item] = questions.splice(index, 1);
+      questions.splice(newIndex, 0, item);
+      if (currentQuestionIndex === index) currentQuestionIndex = newIndex;
+      if (currentQuestionIndex > index && direction < 0) currentQuestionIndex -= 1;
+      if (currentQuestionIndex < index && direction > 0) currentQuestionIndex += 1;
+      savePersistentData();
+      renderAll();
+    }
+
+    function nextQuestion() {
+      currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+      renderAll();
+    }
+
+    function prevQuestion() {
+      currentQuestionIndex = (currentQuestionIndex - 1 + questions.length) % questions.length;
+      renderAll();
+    }
+
+    function startQuestionTimer() {
+      const q = questions[currentQuestionIndex];
+      if (!q) return;
+      timerSeconds = q.timeLimit || 15;
+      clearInterval(timerInterval);
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timerSeconds -= 1;
+        updateTimerDisplay();
+        if (timerSeconds <= 0) {
+          clearInterval(timerInterval);
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const bar = document.getElementById('hostTimerBar');
+      const text = document.getElementById('hostTimerText');
+      const currentQ = questions[currentQuestionIndex] || questions[0];
+      const total = currentQ ? currentQ.timeLimit || 15 : 15;
+      const pct = Math.max(0, (timerSeconds / total) * 100);
+      bar.style.width = `${pct}%`;
+      text.innerText = `${Math.max(timerSeconds, 0)}s`;
+    }
+
+    function revealAnswer() {
+      const currentQ = questions[currentQuestionIndex];
+      if (!currentQ) return;
+      currentQ.revealed = true;
+      savePersistentData();
+      renderQuestionPanel();
+    }
+
+    function submitPlayerAnswer(playerId, questionId, answerText, answerIndex) {
+      const currentQ = questions[currentQuestionIndex];
+      const isCorrect = currentQ && answerIndex === currentQ.correctIndex;
+
+      const existing = responses.find(r => r.playerId === playerId && r.questionId === questionId);
+      if (existing) return;
 
       responses.push({
-        id: 'resp-' + Date.now(),
-        pollId: pollId,
-        studentId: currentStudentId,
-        optionIndex: optionIndex
+        id: `r-${Date.now()}`,
+        playerId,
+        questionId,
+        answerText,
+        answerIndex,
+        isCorrect,
+        submittedAt: new Date().toISOString()
       });
 
-      // Award points
-      const p = participants.find(st => st.id === currentStudentId);
-      if (p) p.score += 10;
+      const player = players.find(p => p.id === playerId);
+      if (player && isCorrect) {
+        player.score += 10;
+      }
 
-      saveSystemData();
-      renderAllViews();
-      playAudioTone(523.25, 0.1);
+      savePersistentData();
+      renderAll();
     }
 
-    function awardScore(studentId, points) {
-      const p = participants.find(st => st.id === studentId);
-      if (p) {
-        p.score += points;
-        saveSystemData();
-        renderAllViews();
-        playAudioTone(800, 0.08);
+    function spinRandomizer() {
+      const currentQ = questions[currentQuestionIndex];
+      if (!currentQ) return;
+      const correctResponses = responses.filter(r => r.questionId === currentQ.id && r.isCorrect);
+      if (!correctResponses.length) {
+        document.getElementById('slotExplanation').innerText = 'No correct submissions yet. This question has no eligible winner.';
+        return;
+      }
+
+      const slotDisplay = document.getElementById('slotDisplayR');
+      const explanation = document.getElementById('slotExplanation');
+      const resultCard = document.getElementById('winnerResultCard');
+      const resultName = document.getElementById('winnerResultName');
+      const resultDetail = document.getElementById('winnerResultDetail');
+
+      let ticks = 0;
+      const interval = setInterval(() => {
+        const candidate = Math.floor(Math.random() * 100) + 1;
+        slotDisplay.innerText = `#${candidate}`;
+        ticks++;
+        if (ticks >= 18) {
+          clearInterval(interval);
+          const winning = correctResponses[Math.floor(Math.random() * correctResponses.length)];
+          const player = players.find(p => p.id === winning.playerId);
+          if (!player) return;
+
+          slotDisplay.innerText = `#${player.number}`;
+          explanation.innerText = `${player.name} (#${player.number}) selected the correct answer and was selected by the spin.`;
+          resultCard.classList.remove('hidden');
+          resultName.innerText = player.name;
+          resultDetail.innerText = `Awarded to player #${player.number} (Correct answer chosen)`;
+
+          winners.unshift({
+            id: `w-${Date.now()}`,
+            prize: 'Round Prize',
+            playerName: player.name,
+            playerNumber: player.number,
+            questionId: currentQ.id
+          });
+
+          if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+          savePersistentData();
+          renderAll();
+        }
+      }, 80);
+    }
+
+    function triggerGrandPodium() {
+      const sorted = [...players].sort((a, b) => b.score - a.score).slice(0, 3);
+      if (!sorted.length) return;
+      const podiumText = sorted.map((p, idx) => `${idx + 1}. ${p.name} (#${p.number}) - ${p.score} pts`).join('\n');
+      alert('Final Top 3 Podium\n\n' + podiumText);
+    }
+
+    function openQuestionModal() {
+      document.getElementById('questionModal').classList.remove('hidden');
+      document.getElementById('questionModal').classList.add('flex');
+    }
+
+    function closeQuestionModal() {
+      document.getElementById('questionModal').classList.add('hidden');
+      document.getElementById('questionModal').classList.remove('flex');
+    }
+
+    function handleCreateQuestion(event) {
+      event.preventDefault();
+      const prompt = document.getElementById('qPromptInput').value.trim();
+      const opts = [...document.querySelectorAll('.q-option-input')].map(input => input.value.trim()).filter(Boolean);
+      if (!prompt || opts.length < 2) return;
+
+      questions.push({
+        id: `q${Date.now()}`,
+        text: prompt,
+        options: opts.slice(0, 4),
+        correctIndex: 1,
+        timeLimit: 15,
+        revealed: false
+      });
+
+      currentQuestionIndex = questions.length - 1;
+      closeQuestionModal();
+      savePersistentData();
+      renderAll();
+    }
+
+    function exportQuestionsJSON() {
+      const blob = new Blob([JSON.stringify(questions, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'csso_questions.json';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function importQuestionsJSON(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed) && parsed.length) {
+            questions = parsed;
+            currentQuestionIndex = 0;
+            savePersistentData();
+            renderAll();
+          }
+        } catch (err) {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function openRawJsonModal() {
+      document.getElementById('rawJsonTextarea').value = JSON.stringify(questions, null, 2);
+      document.getElementById('rawJsonModal').classList.remove('hidden');
+      document.getElementById('rawJsonModal').classList.add('flex');
+    }
+
+    function closeRawJsonModal() {
+      document.getElementById('rawJsonModal').classList.add('hidden');
+      document.getElementById('rawJsonModal').classList.remove('flex');
+    }
+
+    function applyRawJson() {
+      try {
+        const parsed = JSON.parse(document.getElementById('rawJsonTextarea').value);
+        if (Array.isArray(parsed) && parsed.length) {
+          questions = parsed;
+          savePersistentData();
+          closeRawJsonModal();
+          renderAll();
+        }
+      } catch (err) {
+        alert('The JSON is invalid.');
       }
     }
 
-    function copyJoinLink() {
-      const linkText = "https://profrobyn.github.io/csso/?join=true";
-      const tempInput = document.createElement("input");
-      tempInput.value = linkText;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      document.execCommand("copy");
-      document.body.removeChild(tempInput);
+    function copyJsonToClipboard() {
+      const text = document.getElementById('rawJsonTextarea').value;
+      navigator.clipboard.writeText(text);
+    }
 
-      playAudioTone(700, 0.08);
-      alertModal("Link Copied!", "The join URL has been copied to your clipboard:\n" + linkText);
+    function copyJoinLink() {
+      const url = 'https://profrobyn.github.io/csso/?join=true';
+      navigator.clipboard.writeText(url);
     }
 
     function openWipeModal() {
-      const modal = document.getElementById('wipe-modal');
-      const card = document.getElementById('wipe-modal-card');
+      const modal = document.getElementById('wipeModal');
+      const card = document.getElementById('wipeModalCard');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
       setTimeout(() => {
@@ -1147,8 +1071,8 @@
     }
 
     function closeWipeModal() {
-      const modal = document.getElementById('wipe-modal');
-      const card = document.getElementById('wipe-modal-card');
+      const modal = document.getElementById('wipeModal');
+      const card = document.getElementById('wipeModalCard');
       card.classList.remove('scale-100', 'opacity-100');
       card.classList.add('scale-95', 'opacity-0');
       setTimeout(() => {
@@ -1158,108 +1082,25 @@
     }
 
     function executeWipeData() {
-      participants = [];
+      questions = structuredClone(defaultQuestions);
+      players = structuredClone(defaultPlayers);
       responses = [];
-      raffleLog = [];
-      polls = DEFAULT_POLLS;
-      activePollId = polls[0].id;
-
-      saveSystemData();
+      winners = [];
+      currentQuestionIndex = 0;
+      timerSeconds = 15;
+      savePersistentData();
       closeWipeModal();
-      renderAllViews();
-      playAudioTone(300, 0.2);
+      renderAll();
     }
 
-    function showWinnerModal(winner, prizeTitle, drawnNum, matchType, distance) {
-      document.getElementById('winner-modal-name').innerText = winner.name;
-      document.getElementById('winner-modal-num').innerText = `Participant #${winner.number}`;
-
-      const resBox = document.getElementById('winner-resolution-box');
-      if (matchType === 'exact') {
-        resBox.innerHTML = `
-          <div>🎯 <strong>Exact Match!</strong> Participant #${drawnNum} was drawn directly.</div>
-          <div>Prize Awarded: <strong>${escapeHTML(prizeTitle)}</strong></div>
-        `;
-      } else {
-        resBox.innerHTML = `
-          <div>🎲 Drawn Number: <strong>#${drawnNum}</strong> (Does not exist or previously won)</div>
-          <div>⚡ Closest Fallback: <strong>#${winner.number}</strong> (Difference distance: ${distance})</div>
-          <div>Prize Awarded: <strong>${escapeHTML(prizeTitle)}</strong></div>
-        `;
-      }
-
-      const modal = document.getElementById('winner-modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    function closeWinnerModal() {
-      document.getElementById('winner-modal').classList.add('hidden');
-      document.getElementById('winner-modal').classList.remove('flex');
-    }
-
-    function alertModal(title, msg) {
-      alert(`${title}\n\n${msg}`);
-    }
-
-    function openNewPollModal() {
-      document.getElementById('poll-modal').classList.remove('hidden');
-      document.getElementById('poll-modal').classList.add('flex');
-    }
-
-    function closeNewPollModal() {
-      document.getElementById('poll-modal').classList.add('hidden');
-      document.getElementById('poll-modal').classList.remove('flex');
-    }
-
-    function handleCreatePoll(e) {
-      e.preventDefault();
-      const prompt = document.getElementById('poll-prompt-input').value.trim();
-      const optInputs = document.querySelectorAll('.poll-opt-input');
-      const options = [];
-      optInputs.forEach(i => { if (i.value.trim()) options.push(i.value.trim()); });
-
-      const newPoll = {
-        id: 'p-' + Date.now(),
-        title: prompt,
-        options: options,
-        correctIndex: 0,
-        active: true
-      };
-
-      polls.push(newPoll);
-      activePollId = newPoll.id;
-      saveSystemData();
-      closeNewPollModal();
-      renderAllViews();
-    }
-
-    function setActivePoll(id) {
-      activePollId = id;
-      saveSystemData();
-      renderAllViews();
-    }
-
-    function navigatePoll(dir) {
-      const idx = polls.findIndex(p => p.id === activePollId);
-      let newIdx = idx + dir;
-      if (newIdx < 0) newIdx = polls.length - 1;
-      if (newIdx >= polls.length) newIdx = 0;
-      activePollId = polls[newIdx].id;
-      saveSystemData();
-      renderAllViews();
-    }
-
-    function escapeHTML(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
+    document.getElementById('playerSelect').addEventListener('change', (e) => {
+      playerIdSelected = e.target.value;
+      renderPlayerView();
+    });
 
     window.addEventListener('DOMContentLoaded', () => {
-      initSystemData();
+      loadPersistentData();
+      renderAll();
     });
   </script>
 </body>
