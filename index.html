@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- STRICT ZERO-CACHE HEADERS FOR GITHUB PAGES -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -17,8 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- MQTT.js for Realtime WebSockets -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+
+  <!-- FIREBASE REALTIME SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
   <script>
     tailwind.config = {
@@ -42,36 +43,18 @@
       color: #f8fafc;
       font-family: system-ui, -apple-system, sans-serif;
     }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #060e1a;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #162840;
-      border-radius: 4px;
-    }
-    .slot-machine-num {
-      animation: slotPulse 0.1s infinite linear;
-    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #060e1a; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #162840; border-radius: 4px; }
+    .slot-machine-num { animation: slotPulse 0.1s infinite linear; }
     @keyframes slotPulse {
       0% { transform: translateY(-2px); opacity: 0.8; }
       50% { transform: translateY(2px); opacity: 1; }
       100% { transform: translateY(-2px); opacity: 0.8; }
     }
-    .podium-first {
-      height: 180px;
-      background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
-    }
-    .podium-second {
-      height: 130px;
-      background: linear-gradient(180deg, #94a3b8 0%, #475569 100%);
-    }
-    .podium-third {
-      height: 100px;
-      background: linear-gradient(180deg, #d97706 0%, #78350f 100%);
-    }
+    .podium-first { height: 180px; background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); }
+    .podium-second { height: 130px; background: linear-gradient(180deg, #94a3b8 0%, #475569 100%); }
+    .podium-third { height: 100px; background: linear-gradient(180deg, #d97706 0%, #78350f 100%); }
   </style>
 </head>
 <body class="min-h-screen flex flex-col pb-28">
@@ -105,7 +88,6 @@
     <!-- ==================== HOST / STAGE VIEW ==================== -->
     <div id="hostViewSection" class="space-y-6">
 
-      <!-- HOST NAVIGATION TABS -->
       <div class="flex flex-wrap items-center justify-between gap-3 bg-cssoNavyDark p-3 rounded-xl border border-cssoNavyLight">
         <div class="flex items-center space-x-2">
           <button id="tabBtnBuilder" onclick="setHostSubTab('builder')" class="px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoGold text-cssoNavy shadow-md">
@@ -121,7 +103,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-shield-halved mr-1"></i> Dual Transport Active
+            <i class="fa-solid fa-circle-check mr-1"></i> Firebase Realtime Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -129,10 +111,8 @@
         </div>
       </div>
 
-      <!-- SUB-TAB 1: QUESTION BUILDER & LAUNCH LOBBY -->
+      <!-- SUB-TAB 1: QUESTION BUILDER -->
       <div id="hostSubTabBuilder" class="space-y-6">
-
-        <!-- JSON Management Toolbar -->
         <div class="bg-cssoNavyDark p-4 rounded-xl border border-cssoNavyLight flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -158,7 +138,6 @@
           </div>
         </div>
 
-        <!-- Add / Edit Question Form -->
         <div class="bg-cssoNavyDark p-5 rounded-xl border border-cssoNavyLight space-y-4">
           <h3 id="formTitle" class="text-md font-bold text-cssoGold flex items-center gap-2">
             <i class="fa-solid fa-plus-circle"></i> Add New Trivia Question
@@ -207,9 +186,7 @@
             </div>
 
             <div class="flex items-center space-x-2">
-              <button id="cancelEditBtn" onclick="cancelQuestionEdit()" class="hidden px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">
-                Cancel
-              </button>
+              <button id="cancelEditBtn" onclick="cancelQuestionEdit()" class="hidden px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">Cancel</button>
               <button onclick="saveQuestionFromForm()" class="px-5 py-2 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-sm rounded-lg transition shadow-md">
                 <i class="fa-solid fa-save mr-1"></i> Save Question
               </button>
@@ -217,7 +194,6 @@
           </div>
         </div>
 
-        <!-- Questions List Container -->
         <div class="bg-cssoNavyDark p-5 rounded-xl border border-cssoNavyLight space-y-3">
           <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
             <h3 class="text-md font-bold text-white flex items-center gap-2">
@@ -225,11 +201,9 @@
             </h3>
             <p class="text-xs text-slate-400">Use ⬆️ / ⬇️ to reorder questions for the live presentation.</p>
           </div>
-
           <div id="questionsList" class="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-1"></div>
         </div>
 
-        <!-- LAUNCH GAME / LOBBY CONTROL SECTION AT BOTTOM -->
         <div class="bg-gradient-to-br from-cssoNavyLight to-cssoNavyDark p-6 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-6">
           <div>
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Event Launch Portal</span>
@@ -240,13 +214,13 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto items-center bg-cssoNavyDark/80 p-5 rounded-xl border border-cssoNavyLight">
             <div class="space-y-3">
               <label class="block text-xs font-semibold text-cssoGold uppercase tracking-wider text-left">Custom Join URL (Display & QR Code)</label>
-              <input type="text" id="joinUrlInput" value="https://profrobyn.github.io/csso/?join=true&v=3" oninput="updateQrCode()" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-xs text-white focus:border-cssoGold focus:outline-none">
+              <input type="text" id="joinUrlInput" value="https://profrobyn.github.io/csso/?join=true" oninput="updateQrCode()" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-xs text-white focus:border-cssoGold focus:outline-none">
               
               <div class="p-3 bg-cssoNavy rounded-lg border border-cssoNavyLight text-left flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-400">Connected Audience</p>
                   <p id="lobbyPlayerCount" class="text-2xl font-black text-cssoGold">0 Players</p>
-                  <p id="lobbyDeviceCount" class="text-[11px] text-emerald-400 font-semibold">(0 Devices Online)</p>
+                  <p id="lobbyDeviceCount" class="text-[11px] text-emerald-400 font-semibold">(Firebase Connected)</p>
                 </div>
                 <i class="fa-solid fa-users text-3xl text-slate-600"></i>
               </div>
@@ -262,31 +236,22 @@
             <i class="fa-solid fa-rocket text-2xl"></i> Launch Game & Open Audience Stage
           </button>
         </div>
-
       </div>
 
-      <!-- SUB-TAB 2: AUDIENCE PRESENTATION STAGE -->
+      <!-- SUB-TAB 2: AUDIENCE STAGE -->
       <div id="hostSubTabStage" class="hidden space-y-6">
-
-        <!-- STAGE CARD -->
         <div class="bg-cssoNavyDark p-6 md:p-8 rounded-2xl border-2 border-cssoNavyLight shadow-2xl relative min-h-[550px] flex flex-col justify-between">
-
-          <!-- STAGE HEADER -->
           <div class="flex items-center justify-between border-b border-cssoNavyLight pb-4">
             <div class="flex items-center space-x-3">
               <span id="stageBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cssoGold text-cssoNavy">Lobby Phase</span>
               <span id="stageQProgress" class="text-xs font-bold text-slate-400">Questions: 14</span>
             </div>
-
-            <div class="flex items-center space-x-4">
-              <div class="text-right">
-                <p class="text-xs text-slate-400">Active Audience</p>
-                <p id="stagePlayerCount" class="text-sm font-bold text-cssoGold">0 Joined</p>
-              </div>
+            <div class="text-right">
+              <p class="text-xs text-slate-400">Active Audience</p>
+              <p id="stagePlayerCount" class="text-sm font-bold text-cssoGold">0 Joined</p>
             </div>
           </div>
 
-          <!-- STAGE CONTENT VIEW 1: LOBBY QR SCREEN -->
           <div id="stageLobbyScreen" class="py-10 text-center space-y-6 my-auto">
             <div class="inline-block px-4 py-1.5 rounded-full bg-cssoNavyLight border border-cssoGold/40 text-cssoGold text-xs font-bold tracking-wide">
               CSSO Event Interactive Giveaway
@@ -302,7 +267,7 @@
 
               <div class="text-left space-y-3 bg-cssoNavy p-6 rounded-2xl border border-cssoNavyLight max-w-xs">
                 <p class="text-xs text-slate-400 uppercase tracking-widest font-bold">Or Enter URL:</p>
-                <p id="stageUrlDisplay" class="text-lg font-black text-cssoGold break-all">profrobyn.github.io/csso/?join=true&v=3</p>
+                <p id="stageUrlDisplay" class="text-lg font-black text-cssoGold break-all">profrobyn.github.io/csso/?join=true</p>
                 <div class="pt-2 border-t border-cssoNavyLight flex items-center justify-between">
                   <span class="text-xs text-slate-300">Live Attendees:</span>
                   <span id="stageLobbyCount" class="text-xl font-extrabold text-emerald-400">0</span>
@@ -317,7 +282,6 @@
             </div>
           </div>
 
-          <!-- STAGE CONTENT VIEW 2: ACTIVE QUESTION SCREEN -->
           <div id="stageQuestionScreen" class="hidden py-6 space-y-6 my-auto">
             <div class="flex items-center justify-between">
               <span id="stageQNumber" class="text-sm font-bold text-cssoGold uppercase tracking-wider">Question 1</span>
@@ -327,16 +291,9 @@
               </div>
             </div>
 
-            <h2 id="stageQText" class="text-2xl md:text-3xl font-extrabold text-white leading-tight">
-              Question Prompt Text...
-            </h2>
-
-            <!-- Options Display Grid -->
+            <h2 id="stageQText" class="text-2xl md:text-3xl font-extrabold text-white leading-tight">Question Prompt Text...</h2>
             <div id="stageOptionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"></div>
 
-            <p class="text-[11px] text-slate-400 italic text-center">Stage Control View (Display on Projector/Zoom) — Audience selects answers on smartphones.</p>
-
-            <!-- Stats Breakdown Bar -->
             <div id="stageStatsBar" class="hidden bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight space-y-2">
               <div class="flex items-center justify-between text-xs font-bold text-slate-300">
                 <span>Response Breakdown:</span>
@@ -349,22 +306,17 @@
             </div>
           </div>
 
-          <!-- STAGE CONTENT VIEW 3: PRIZE RANDOMIZER SCREEN -->
           <div id="stageRandomizerScreen" class="hidden py-10 text-center space-y-6 my-auto">
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Round Prize Draw</span>
             <h2 class="text-2xl md:text-4xl font-black text-white">Spinning for Eligible Winner...</h2>
-            <p id="spinEligibilityNotice" class="text-xs text-slate-300">Selecting from correct respondents who haven't won an individual prize yet.</p>
 
             <div class="max-w-md mx-auto bg-cssoNavy p-8 rounded-2xl border-2 border-cssoGold shadow-2xl relative overflow-hidden">
               <div class="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2">Randomizer Reel</div>
-              <div id="slotDisplay" class="text-5xl font-black text-cssoGold tracking-widest py-4 slot-machine-num">
-                # --
-              </div>
+              <div id="slotDisplay" class="text-5xl font-black text-cssoGold tracking-widest py-4 slot-machine-num"># --</div>
               <p id="slotCandidateName" class="text-sm font-semibold text-slate-300 min-h-[20px]">Drawing contestant...</p>
             </div>
           </div>
 
-          <!-- STAGE CONTENT VIEW 4: WINNER ANNOUNCEMENT SCREEN -->
           <div id="stageWinnerScreen" class="hidden py-8 text-center space-y-6 my-auto">
             <div class="inline-block px-4 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs font-bold tracking-wide">
               🎉 Round Winner Awarded!
@@ -378,9 +330,6 @@
                 <h3 id="winnerNameDisplay" class="text-3xl font-black text-white">Winner Name</h3>
                 <p id="winnerSubDisplay" class="text-sm font-bold text-cssoGold mt-1">Player #00</p>
               </div>
-              <div class="pt-2 border-t border-cssoNavyLight text-xs text-slate-300">
-                Correct answer submitted & verified!
-              </div>
             </div>
 
             <div class="pt-4 flex justify-center">
@@ -390,18 +339,13 @@
             </div>
           </div>
 
-          <!-- STAGE FOOTER CONTROLS -->
           <div class="border-t border-cssoNavyLight pt-4 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
             <span>Stage Presentation View</span>
-            <div class="flex items-center space-x-3">
-              <button onclick="triggerGrandPodium()" class="px-3 py-1.5 rounded-lg bg-purple-900/60 text-purple-200 border border-purple-600 font-bold hover:bg-purple-800 transition">
-                <i class="fa-solid fa-trophy mr-1"></i> Trigger Grand Podium
-              </button>
-            </div>
+            <button onclick="triggerGrandPodium()" class="px-3 py-1.5 rounded-lg bg-purple-900/60 text-purple-200 border border-purple-600 font-bold hover:bg-purple-800 transition">
+              <i class="fa-solid fa-trophy mr-1"></i> Trigger Grand Podium
+            </button>
           </div>
-
         </div>
-
       </div>
 
       <!-- SUB-TAB 3: WINNERS LOG -->
@@ -414,7 +358,6 @@
             <i class="fa-solid fa-award mr-1"></i> View Final Top 3 Podium
           </button>
         </div>
-
         <div id="winnersLogContainer" class="space-y-2">
           <p class="text-xs text-slate-400 italic">No round winners awarded yet.</p>
         </div>
@@ -425,7 +368,6 @@
     <!-- ==================== PLAYER SMARTPHONE VIEW ==================== -->
     <div id="playerViewSection" class="hidden max-w-md mx-auto space-y-6">
 
-      <!-- PLAYER REGISTRATION CARD -->
       <div id="playerRegisterCard" class="bg-cssoNavyDark p-6 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-5">
         <div class="w-16 h-16 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl font-bold shadow-md">
           <i class="fa-solid fa-user-astronaut"></i>
@@ -443,9 +385,7 @@
         </div>
       </div>
 
-      <!-- PLAYER ACTIVE GAMEPLAY CARD -->
       <div id="playerGameplayCard" class="hidden bg-cssoNavyDark p-6 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-5">
-        
         <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
           <div>
             <p id="playerBadgeName" class="text-sm font-black text-white">Player</p>
@@ -453,11 +393,10 @@
           </div>
           <div class="text-right">
             <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-amber-400 font-bold">Dual Sync Active...</p>
+            <p id="playerStatusTag" class="text-[10px] text-emerald-400 font-bold">Firebase Connected</p>
           </div>
         </div>
 
-        <!-- WAITING SCREEN -->
         <div id="playerWaitingScreen" class="py-10 text-center space-y-3">
           <div class="w-12 h-12 mx-auto rounded-full bg-cssoNavyLight text-cssoGold flex items-center justify-center text-xl animate-spin">
             <i class="fa-solid fa-spinner"></i>
@@ -466,21 +405,16 @@
           <p class="text-xs text-slate-400">You are registered! Questions will appear automatically on your screen.</p>
         </div>
 
-        <!-- QUESTION ANSWERING SCREEN -->
         <div id="playerQuestionScreen" class="hidden space-y-4">
           <div class="flex items-center justify-between">
             <span id="playerQNum" class="text-xs font-bold text-cssoGold uppercase">Question 1</span>
             <span id="playerTimer" class="text-xs font-bold bg-cssoNavy px-2.5 py-1 rounded-full border border-cssoNavyLight text-white">15s</span>
           </div>
 
-          <h3 id="playerQPrompt" class="text-base font-bold text-white leading-snug">
-            Question text...
-          </h3>
-
+          <h3 id="playerQPrompt" class="text-base font-bold text-white leading-snug">Question text...</h3>
           <div id="playerButtonsGrid" class="grid grid-cols-1 gap-2.5"></div>
         </div>
 
-        <!-- LOCKED RESPONSE CONFIRMATION -->
         <div id="playerLockedScreen" class="hidden py-8 text-center space-y-3">
           <div class="w-12 h-12 mx-auto rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-500 flex items-center justify-center text-xl">
             <i class="fa-solid fa-check"></i>
@@ -489,7 +423,6 @@
           <p class="text-xs text-slate-300">Sit tight. Waiting for time to expire and winner draw.</p>
         </div>
 
-        <!-- PLAYER WIN / ROUND ANNOUNCEMENT CARD -->
         <div id="playerWinCard" class="hidden p-6 rounded-2xl border-2 text-center space-y-4 transition-all">
           <div id="playerWinIcon" class="w-16 h-16 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-3xl shadow-lg">
             <i class="fa-solid fa-trophy"></i>
@@ -499,1085 +432,142 @@
             <p id="playerWinSub" class="text-xs text-slate-300 mt-1">Checking round prize status...</p>
           </div>
         </div>
-
       </div>
 
     </div>
 
   </main>
 
-  <!-- ==================== LIVE ON-SCREEN DEBUGGER PANEL ==================== -->
-  <div id="debugPanel" class="fixed bottom-0 inset-x-0 bg-cssoNavyDark/95 border-t-2 border-cssoGold backdrop-blur-md z-50 text-xs text-slate-300 font-mono shadow-2xl transition-all duration-300">
-    <div class="flex items-center justify-between px-4 py-2 bg-cssoNavy border-b border-cssoNavyLight">
-      <div class="flex items-center space-x-3">
-        <button onclick="toggleDebugPanel()" class="font-bold text-cssoGold flex items-center gap-1.5 hover:text-white">
-          <i class="fa-solid fa-bug"></i> 🐞 Live Network Debug Console
-          <span id="debugBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">Ready</span>
-        </button>
-        <span id="roomTagDisplay" class="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">Channel: csso_trivia_symposium_2026</span>
-      </div>
-
-      <div class="flex items-center space-x-2">
-        <button onclick="sendTestPing()" class="px-2.5 py-1 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-600">
-          <i class="fa-solid fa-paper-plane mr-1"></i> Send Test Ping
-        </button>
-        <button onclick="clearDebugLog()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] rounded">
-          Clear
-        </button>
-        <button onclick="toggleDebugPanel()" class="p-1 text-slate-400 hover:text-white">
-          <i id="debugToggleIcon" class="fa-solid fa-chevron-down"></i>
-        </button>
-      </div>
-    </div>
-
-    <div id="debugLogContainer" class="p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1 bg-black/60 hidden">
-      <div id="debugLogContent" class="space-y-0.5 text-[11px]"></div>
-    </div>
-  </div>
-
-  <!-- ==================== MODALS ==================== -->
-
-  <!-- RAW JSON PASTE MODAL -->
-  <div id="jsonModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-cssoNavyDark max-w-2xl w-full p-6 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-code text-cssoGold"></i> Raw JSON Question Data
-        </h3>
-        <button onclick="closeRawJSONModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <p class="text-xs text-slate-300">View or paste your raw JSON question array below:</p>
-
-      <textarea id="rawJsonTextArea" rows="10" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-xs font-mono text-emerald-400 focus:border-cssoGold focus:outline-none"></textarea>
-
-      <div class="flex items-center justify-between pt-2">
-        <button onclick="copyRawJSONText()" class="px-3 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg transition">
-          <i class="fa-solid fa-copy mr-1"></i> Copy to Clipboard
-        </button>
-        <div class="flex items-center space-x-2">
-          <button onclick="closeRawJSONModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">Cancel</button>
-          <button onclick="applyRawJSONText()" class="px-4 py-2 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-xs rounded-lg transition">Apply JSON</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- GRAND PODIUM MODAL -->
   <div id="podiumModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-cssoNavyDark max-w-xl w-full p-6 md:p-8 rounded-2xl border-2 border-cssoGold shadow-2xl space-y-6 text-center relative overflow-hidden">
-      
       <div>
         <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Final Standings</span>
         <h2 class="text-3xl font-black text-white mt-1">🏆 Grand Winner Podium 🏆</h2>
-        <p class="text-xs text-slate-300">Ranked by total correct answers & cumulative response speed.</p>
       </div>
 
-      <!-- 3D Podium Display -->
       <div class="flex items-end justify-center gap-2 md:gap-4 pt-6 pb-2 min-h-[220px]">
-        
-        <!-- 2ND PLACE -->
         <div class="flex-1 flex flex-col items-center">
           <div class="mb-2 text-center">
             <span class="text-2xl">🥈</span>
             <p id="podium2Name" class="text-xs font-bold text-white truncate max-w-[100px]">Player 2</p>
             <p id="podium2Score" class="text-[10px] text-slate-300">0 pts</p>
           </div>
-          <div class="w-full podium-second rounded-t-xl flex items-center justify-center font-black text-2xl text-slate-200 border-t-2 border-slate-300 shadow-lg">
-            2
-          </div>
+          <div class="w-full podium-second rounded-t-xl flex items-center justify-center font-black text-2xl text-slate-200 border-t-2 border-slate-300 shadow-lg">2</div>
         </div>
 
-        <!-- 1ST PLACE -->
         <div class="flex-1 flex flex-col items-center">
           <div class="mb-2 text-center">
             <span class="text-3xl animate-bounce inline-block">👑</span>
             <p id="podium1Name" class="text-sm font-extrabold text-cssoGold truncate max-w-[110px]">Player 1</p>
             <p id="podium1Score" class="text-xs font-bold text-emerald-400">0 pts</p>
           </div>
-          <div class="w-full podium-first rounded-t-xl flex items-center justify-center font-black text-4xl text-cssoNavy border-t-4 border-cssoGoldLight shadow-2xl">
-            1
-          </div>
+          <div class="w-full podium-first rounded-t-xl flex items-center justify-center font-black text-4xl text-cssoNavy border-t-4 border-cssoGoldLight shadow-2xl">1</div>
         </div>
 
-        <!-- 3RD PLACE -->
         <div class="flex-1 flex flex-col items-center">
           <div class="mb-2 text-center">
             <span class="text-2xl">🥉</span>
             <p id="podium3Name" class="text-xs font-bold text-white truncate max-w-[100px]">Player 3</p>
             <p id="podium3Score" class="text-[10px] text-slate-300">0 pts</p>
           </div>
-          <div class="w-full podium-third rounded-t-xl flex items-center justify-center font-black text-2xl text-amber-200 border-t-2 border-amber-500 shadow-lg">
-            3
-          </div>
+          <div class="w-full podium-third rounded-t-xl flex items-center justify-center font-black text-2xl text-amber-200 border-t-2 border-amber-500 shadow-lg">3</div>
         </div>
-
       </div>
 
       <div class="pt-2">
-        <button onclick="closePodiumModal()" class="px-6 py-2.5 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-sm rounded-xl shadow-lg transition">
-          Close Leaderboard
-        </button>
+        <button onclick="closePodiumModal()" class="px-6 py-2.5 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-sm rounded-xl shadow-lg transition">Close Leaderboard</button>
       </div>
-
     </div>
   </div>
 
-
-  <!-- JavaScript Application Logic -->
   <script>
-    // ==================== DEFAULT FALL 2026 CSSO TRIVIA DATA ====================
+    // ==================== FIREBASE CONFIGURATION ====================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUSENLwg0rq7DjobtbtzKU_sexfC1wrZc",
+      authDomain: "csso-trivia.firebaseapp.com",
+      databaseURL: "https://csso-trivia-default-rtdb.firebaseio.com",
+      projectId: "csso-trivia",
+      storageBucket: "csso-trivia.firebasestorage.app",
+      messagingSenderId: "388078293238",
+      appId: "1:388078293238:web:1234567890abcdef"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+    const ROOM_ID = 'csso_trivia_symposium_2026';
+    const roomRef = db.ref(`rooms/${ROOM_ID}`);
+
     const DEFAULT_QUESTIONS = [
-      {
-        id: "question_1",
-        text: "What was the theme of the Fall 2026 CSSO Symposium?",
-        options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Building the Future Together"],
-        correctIndex: 2,
-        timeLimit: 15
-      },
-      {
-        id: "question_2",
-        text: "How many times has the CSSO Association offered the CSSO Academy?",
-        options: ["This was the first time.", "This was the second time.", "This was the third time.", "This was the fourth time."],
-        correctIndex: 0,
-        timeLimit: 15
-      },
-      {
-        id: "question_3",
-        text: "What was the primary takeaway from the CSSO Academy?",
-        options: [
-          "Participants would work with a mentor to implement a solution on their campus and present it at the Spring Conference.",
-          "Participants would independently write a statewide policy proposal without mentor support.",
-          "Participants would evaluate another college’s student-services division and issue recommendations.",
-          "Participants would complete the academy without a follow-up project or presentation."
-        ],
-        correctIndex: 0,
-        timeLimit: 15
-      },
-      {
-        id: "question_4",
-        text: "During the Opening Welcome and CSSO Association Remarks, what had association leaders emphasized?",
-        options: [
-          "Competition among community college districts",
-          "Shared leadership, student success, and collective wisdom",
-          "Uniform organizational structures for every college",
-          "Individual performance assessment"
-        ],
-        correctIndex: 1,
-        timeLimit: 15
-      },
-      {
-        id: "question_5",
-        text: "During Dr. Laurie Vázquez Scolari’s keynote, which leadership theme had been explored?",
-        options: [
-          "Developing effective AI tools to help all students",
-          "Measuring vice presidents against one leadership style",
-          "Reclaiming joy while sustaining authentic leadership",
-          "Reducing leadership to regulatory compliance"
-        ],
-        correctIndex: 2,
-        timeLimit: 15
-      },
-      {
-        id: "question_6",
-        text: "During the Belonging Under Pressure workshop, what had been addressed?",
-        options: [
-          "Faculty load calculation and curriculum sequencing",
-          "Campus construction and bond oversight",
-          "Equity, free speech, retention, and student success amid change",
-          "Intercollegiate athletics recruitment"
-        ],
-        correctIndex: 2,
-        timeLimit: 15
-      },
-      {
-        id: "question_7",
-        text: "During the Tomorrow’s Student Services workshop, what had been examined?",
-        options: [
-          "AI, data, emerging technology, and new forms of student support",
-          "Historical enrollment practices",
-          "Facilities maintenance technology",
-          "Academic laboratory equipment"
-        ],
-        correctIndex: 0,
-        timeLimit: 15
-      },
-      {
-        id: "question_8",
-        text: "During the Dollars, Data, and Decisions workshop, what had been connected?",
-        options: [
-          "Athletic fundraising and ticket sales",
-          "Classroom scheduling and faculty evaluation",
-          "Budget strategy, staffing capacity, reporting, financial aid, and audit readiness",
-          "Construction bidding and fleet replacement"
-        ],
-        correctIndex: 2,
-        timeLimit: 15
-      },
-      {
-        id: "question_9",
-        text: "During the Community College League of California update, what had been the most useful executive takeaway?",
-        options: [
-          "Receiving a uniform solution for every district",
-          "Understanding how statewide advocacy and policy could affect campus decisions",
-          "Comparing vice presidents by legislative knowledge",
-          "Better understanding of past legislation"
-        ],
-        correctIndex: 1,
-        timeLimit: 15
-      },
-      {
-        id: "question_10",
-        text: "During the Supporting the Whole Student workshop, what had been addressed?",
-        options: [
-          "Faculty hiring, curriculum, and laboratory safety",
-          "Construction, parking, and transportation",
-          "Basic needs, housing, mental health, wellness, equity, and access",
-          "Athletics eligibility and team travel"
-        ],
-        correctIndex: 2,
-        timeLimit: 15
-      },
-      {
-        id: "question_11",
-        text: "During the Strengthening the Student Pipeline workshop, what had been connected?",
-        options: [
-          "High school engagement, dual enrollment, guided pathways, and onboarding",
-          "Post-graduation alumni relations",
-          "Facilities planning and bond management",
-          "Faculty contract negotiations"
-        ],
-        correctIndex: 0,
-        timeLimit: 15
-      },
-      {
-        id: "question_12",
-        text: "During the Leading Teams While Managing Risk workshop, what had been examined?",
-        options: [
-          "Classroom pedagogy and course assessment",
-          "Athletic conference governance",
-          "Title IX, policy, mandates, and compliance",
-          "Capital project delivery methods"
-        ],
-        correctIndex: 2,
-        timeLimit: 15
-      },
-      {
-        id: "question_13",
-        text: "During the Leadership Panel, what had best demonstrated shared wisdom?",
-        options: [
-          "Panelists had presented one unquestioned solution",
-          "Participants had avoided difficult topics",
-          "Leaders had compared approaches to common student-services challenges",
-          "Discussion had remained theoretical"
-        ],
-        correctIndex: 2,
-        timeLimit: 15
-      },
-      {
-        id: "question_14",
-        text: "During the Chancellor’s Office Q&A, how had the discussion been shaped?",
-        options: [
-          "By a fixed presentation unrelated to audience needs",
-          "By evaluations of participating vice presidents",
-          "By questions submitted by CSSOs before and during the session",
-          "By topics limited to instructional affairs"
-        ],
-        correctIndex: 2,
-        timeLimit: 15
-      }
+      { id: "q1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Building the Future Together"], correctIndex: 2, timeLimit: 15 },
+      { id: "q2", text: "How many times has the CSSO Association offered the CSSO Academy?", options: ["This was the first time.", "This was the second time.", "This was the third time.", "This was the fourth time."], correctIndex: 0, timeLimit: 15 },
+      { id: "q3", text: "What was the primary takeaway from the CSSO Academy?", options: ["Participants implement a campus solution with a mentor.", "Participants write statewide policy alone.", "Participants evaluate other colleges.", "No follow-up project."], correctIndex: 0, timeLimit: 15 },
+      { id: "q4", text: "What had association leaders emphasized during Opening Remarks?", options: ["Competition among districts", "Shared leadership, student success, and collective wisdom", "Uniform organizational structures", "Individual performance assessment"], correctIndex: 1, timeLimit: 15 },
+      { id: "q5", text: "Keynote theme by Dr. Laurie Vázquez Scolari?", options: ["Developing AI tools", "Measuring vice presidents", "Reclaiming joy while sustaining authentic leadership", "Reducing leadership to compliance"], correctIndex: 2, timeLimit: 15 }
     ];
 
-    // ==================== UNIFIED HYBRID TOPIC ====================
-    function getCleanTopic() {
-      const urlParams = new URLSearchParams(window.location.search);
-      let rawRoom = urlParams.get('room') || '2026';
-      let cleanRoom = rawRoom.toLowerCase().replace(/csso/g, '').replace(/trivia/g, '').replace(/[^a-z0-9]/g, '');
-      if (!cleanRoom) cleanRoom = '2026';
-      return `csso_trivia_symposium_${cleanRoom}`;
-    }
-
-    const EVENT_SYNC_TOPIC = getCleanTopic();
-
-    // ==================== GLOBAL STATE ====================
-    let questions = [];
-    let registeredPlayers = []; // { id, name, score, totalTime, wonIndividual }
-    let connectedDevices = new Set();
-    let currentResponses = []; // { playerId, choiceIndex, timeTaken }
-    let roundWinnersLog = []; // { qIndex, winnerPlayer }
-    
+    let questions = DEFAULT_QUESTIONS;
+    let registeredPlayers = [];
+    let currentResponses = [];
+    let roundWinnersLog = [];
     let currentQIndex = 0;
     let activeGameState = 'LOBBY';
     let stageTimerInterval = null;
     let stageTimeRemaining = 0;
     let localPlayer = null;
-    let registrationAckReceived = false;
-
-    const myDeviceId = `dev_${Math.random().toString(36).substring(2, 8)}`;
     let isHost = true;
-    let broadcastChannel = null;
-    let processedEventKeys = new Set();
 
-    let emqxClient = null;
-    let sseSource = null;
-
-    // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
-
-      document.getElementById('roomTagDisplay').textContent = `Channel: ${EVENT_SYNC_TOPIC}`;
-
       if (urlParams.get('join') === 'true') {
         isHost = false;
         switchMainTab('player');
       }
 
-      loadSavedQuestions();
-      renderQuestionsList();
       updateQrCode();
-
-      initDebugConsole();
-      debugLog(`Page Loaded. Device ID: ${myDeviceId} | Mode: ${isHost ? 'HOST' : 'PLAYER'}`, 'info');
-
-      initSyncEngine();
-
-      if (!isHost) {
-        sendSyncEvent('PHONE_CONNECTED', { deviceId: myDeviceId });
-      }
-
-      // Throttled Host Heartbeat (Every 3s)
-      setInterval(() => {
-        if (isHost) {
-          sendSyncEvent('HOST_HEARTBEAT', {
-            playerIds: registeredPlayers.map(p => p.id),
-            gameState: activeGameState,
-            qIndex: currentQIndex
-          });
-        }
-      }, 3000);
-
-      // Smartphone Handshake Retry Loop
-      setInterval(() => {
-        if (!isHost && localPlayer && !registrationAckReceived) {
-          debugLog(`Retrying PLAYER_JOINED handshake...`, 'warn');
-          sendSyncEvent('PLAYER_JOINED', localPlayer);
-        }
-      }, 2500);
-
-      // Mobile Tab Focus & Wake Recovery
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          debugLog(`Device resumed. Re-enabling dual stream...`, 'info');
-          initSSESream();
-          if (!isHost && localPlayer && !registrationAckReceived) {
-            sendSyncEvent('PLAYER_JOINED', localPlayer);
-          }
-        }
-      });
+      initFirebaseSync();
     });
 
-    // ==================== LIVE DEBUGGER ENGINE ====================
-    function initDebugConsole() {
-      window.onerror = function(msg, url, line, col, error) {
-        debugLog(`Global Error: ${msg} line ${line}:${col}`, 'error');
-        return false;
-      };
-      window.onunhandledrejection = function(e) {
-        debugLog(`Unhandled Promise Error: ${e.reason}`, 'error');
-      };
-    }
-
-    function debugLog(message, type = 'info') {
-      const logBox = document.getElementById('debugLogContent');
-      if (!logBox) return;
-
-      const time = new Date().toLocaleTimeString();
-      let color = 'text-slate-300';
-      if (type === 'error') color = 'text-rose-400 font-bold';
-      if (type === 'success') color = 'text-emerald-400 font-semibold';
-      if (type === 'warn') color = 'text-amber-300';
-
-      const entry = document.createElement('div');
-      entry.className = `${color} border-b border-slate-900 py-0.5`;
-      entry.innerHTML = `<span class="text-slate-500">[${time}]</span> ${escapeHtml(message)}`;
-
-      logBox.appendChild(entry);
-      logBox.scrollTop = logBox.scrollHeight;
-
-      document.getElementById('debugBadge').textContent = `${logBox.children.length} Events`;
-    }
-
-    function toggleDebugPanel() {
-      const container = document.getElementById('debugLogContainer');
-      const icon = document.getElementById('debugToggleIcon');
-      if (container.classList.contains('hidden')) {
-        container.classList.remove('hidden');
-        icon.className = 'fa-solid fa-chevron-down';
-      } else {
-        container.classList.add('hidden');
-        icon.className = 'fa-solid fa-chevron-up';
-      }
-    }
-
-    function clearDebugLog() {
-      const logBox = document.getElementById('debugLogContent');
-      if (logBox) logBox.innerHTML = '';
-      debugLog('Debug log cleared', 'info');
-    }
-
-    function sendTestPing() {
-      sendSyncEvent('PING_TEST', { message: 'Hello from device!' });
-      debugLog(`Sent test PING to channel [${EVENT_SYNC_TOPIC}]`, 'info');
-    }
-
-    // ==================== DUAL HYBRID TRANSPORT NETWORK ENGINE ====================
-    function initSyncEngine() {
-      if (typeof BroadcastChannel !== 'undefined') {
-        try {
-          broadcastChannel = new BroadcastChannel(`csso_chan_${EVENT_SYNC_TOPIC}`);
-          broadcastChannel.onmessage = (e) => {
-            if (e && e.data) processReceivedPayload(e.data);
-          };
-        } catch(e){}
-      }
-
-      window.addEventListener('storage', (e) => {
-        if (e.key === `csso_bus_${EVENT_SYNC_TOPIC}` && e.newValue) {
-          try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
-        }
-      });
-
-      // Transport 1: EMQX Public WebSocket
-      initEMQXWebSocket();
-
-      // Transport 2: HTTPS SSE Stream (ntfy.sh over Port 443)
-      initSSESream();
-    }
-
-    function initEMQXWebSocket() {
-      const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
-      debugLog(`Connecting Transport 1 (EMQX WebSocket): ${brokerUrl}`, 'info');
-
-      try {
-        emqxClient = mqtt.connect(brokerUrl, {
-          clientId: `${myDeviceId}_${Math.random().toString(36).substring(2, 6)}`,
-          keepalive: 30,
-          reconnectPeriod: 2000,
-          connectTimeout: 5000
-        });
-
-        emqxClient.on('connect', () => {
-          debugLog(`⚡ Transport 1 (EMQX WebSocket) Active!`, 'success');
-          emqxClient.subscribe(EVENT_SYNC_TOPIC, { qos: 0 });
-        });
-
-        emqxClient.on('message', (topic, payload) => {
-          try {
-            processReceivedPayload(JSON.parse(payload.toString()));
-          } catch(e){}
-        });
-
-      } catch(e) {
-        debugLog(`EMQX WS Init Warning: ${e.message}`, 'warn');
-      }
-    }
-
-    function initSSESream() {
-      if (sseSource) {
-        try { sseSource.close(); } catch(e){}
-      }
-
-      const sseUrl = `https://ntfy.sh/${EVENT_SYNC_TOPIC}/sse`;
-      debugLog(`Connecting Transport 2 (HTTPS SSE): ${sseUrl}`, 'info');
-
-      try {
-        sseSource = new EventSource(sseUrl);
-
-        sseSource.onmessage = (event) => {
-          try {
-            const parsed = JSON.parse(event.data);
-            if (parsed && parsed.message) {
-              processReceivedPayload(JSON.parse(parsed.message));
-            }
-          } catch(err){}
-        };
-
-      } catch(e) {
-        debugLog(`SSE Stream Notice: Operating on Primary WebSocket.`, 'warn');
-      }
-    }
-
-    async function sendSyncEvent(type, payload) {
-      const eventObj = {
-        type: type,
-        payload: payload,
-        senderId: myDeviceId,
-        topic: EVENT_SYNC_TOPIC,
-        _ts: Date.now() + Math.random()
-      };
-
-      const bodyStr = JSON.stringify(eventObj);
-
-      if (type !== 'HOST_HEARTBEAT') {
-        debugLog(`Sending -> ${type}`, 'info');
-      }
-
-      // 1. Send via EMQX WebSocket
-      if (emqxClient && emqxClient.connected) {
-        try { emqxClient.publish(EVENT_SYNC_TOPIC, bodyStr, { qos: 0 }); } catch(e){}
-      }
-
-      // 2. Send via HTTPS POST (Guaranteed cellular delivery over Port 443)
-      try {
-        fetch(`https://ntfy.sh/${EVENT_SYNC_TOPIC}`, {
-          method: 'POST',
-          body: bodyStr,
-          headers: { 'Content-Type': 'text/plain' }
-        }).catch(() => {});
-      } catch(e){}
-
-      // 3. Local BroadcastChannel
-      if (broadcastChannel) {
-        try { broadcastChannel.postMessage(eventObj); } catch(e){}
-      }
-
-      // 4. LocalStorage Bus
-      try { localStorage.setItem(`csso_bus_${EVENT_SYNC_TOPIC}`, bodyStr); } catch(e){}
-    }
-
-    function processReceivedPayload(eventObj) {
-      if (!eventObj || !eventObj.type || !eventObj._ts) return;
-
-      // STRICT DROP SELF-ECHO MESSAGES
-      if (eventObj.senderId === myDeviceId) return;
-
-      const eventKey = `${eventObj.type}_${eventObj._ts}_${eventObj.senderId}`;
-      if (processedEventKeys.has(eventKey)) return;
-      processedEventKeys.add(eventKey);
-
-      if (processedEventKeys.size > 200) {
-        const arr = Array.from(processedEventKeys);
-        processedEventKeys = new Set(arr.slice(50));
-      }
-
-      if (eventObj.type !== 'HOST_HEARTBEAT') {
-        debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId}`, 'success');
-      }
-
-      handleSyncEvent(eventObj);
-    }
-
-    function handleSyncEvent(eventObj) {
-      const { type, payload, senderId } = eventObj;
-
-      if (type === 'PING_TEST') {
-        debugLog(`Received Test PING from device [${senderId}]`, 'warn');
-      } else if (type === 'PHONE_CONNECTED') {
-        if (isHost && senderId) {
-          connectedDevices.add(senderId);
-          updateLobbyPlayerCounts();
-          debugLog(`Phone Connected Handshake Received from ${senderId}`, 'info');
-        }
-      } else if (type === 'PLAYER_JOINED') {
-        if (payload && payload.id && payload.name) {
-          if (!registeredPlayers.some(p => p.id === payload.id)) {
-            registeredPlayers.push({
-              id: payload.id,
-              name: payload.name,
-              score: 0,
-              totalTime: 0,
-              wonIndividual: false
-            });
-            updateLobbyPlayerCounts();
-            debugLog(`Player Registered: ${payload.name} (Total: ${registeredPlayers.length})`, 'success');
-          }
-
-          if (isHost) {
-            sendSyncEvent('PLAYER_ACK', { playerId: payload.id });
-          }
-        }
-      } else if (type === 'PLAYER_ACK') {
-        if (!isHost && localPlayer && payload && payload.playerId === localPlayer.id) {
-          registrationAckReceived = true;
-          debugLog(`Host Confirmed Player Registration Handshake!`, 'success');
-          const statusTag = document.getElementById('playerStatusTag');
-          if (statusTag) {
-            statusTag.textContent = "Verified & Ready";
-            statusTag.className = "text-[10px] text-emerald-400 font-bold";
-          }
-        }
-      } else if (type === 'HOST_HEARTBEAT') {
-        if (!isHost && localPlayer && payload && Array.isArray(payload.playerIds)) {
-          if (!payload.playerIds.includes(localPlayer.id)) {
-            sendSyncEvent('PLAYER_JOINED', localPlayer);
-          } else {
-            registrationAckReceived = true;
-            const statusTag = document.getElementById('playerStatusTag');
-            if (statusTag) {
-              statusTag.textContent = "Verified & Ready";
-              statusTag.className = "text-[10px] text-emerald-400 font-bold";
-            }
-          }
-        }
-      } else if (type === 'RESPONSE_SUBMITTED') {
-        if (payload && payload.playerId && payload.choiceIndex !== undefined) {
-          if (!currentResponses.some(r => r.playerId === payload.playerId)) {
-            currentResponses.push(payload);
-            debugLog(`Response Recorded for Player ID #${payload.playerId.slice(-4)}`, 'info');
-          }
-        }
-      } else if (type === 'GAME_RESET') {
-        activeGameState = 'LOBBY';
-        registeredPlayers = [];
-        connectedDevices.clear();
-        currentResponses = [];
-        roundWinnersLog = [];
-        registrationAckReceived = false;
+    function initFirebaseSync() {
+      roomRef.child('players').on('value', (snapshot) => {
+        const val = snapshot.val();
+        registeredPlayers = val ? Object.values(val) : [];
         updateLobbyPlayerCounts();
-        renderWinnersLog();
-
-        if (localPlayer && !isHost) {
-          document.getElementById('playerGameplayCard').classList.add('hidden');
-          document.getElementById('playerRegisterCard').classList.remove('hidden');
-          localPlayer = null;
-        }
-        debugLog(`Game Reset Event Received`, 'warn');
-      } else if (type === 'QUESTION_START') {
-        activeGameState = 'QUESTION';
-        if (!isHost && localPlayer) {
-          document.getElementById('playerWaitingScreen').classList.add('hidden');
-          document.getElementById('playerLockedScreen').classList.add('hidden');
-          document.getElementById('playerWinCard').classList.add('hidden');
-          document.getElementById('playerQuestionScreen').classList.remove('hidden');
-
-          const qNum = (payload && payload.qIndex !== undefined) ? payload.qIndex + 1 : 1;
-          const qText = (payload && payload.text) ? payload.text : "Trivia Question Prompt";
-          const tLimit = (payload && payload.timeLimit) ? payload.timeLimit : 15;
-          const opts = (payload && Array.isArray(payload.options)) ? payload.options : ["Option A", "Option B", "Option C", "Option D"];
-
-          document.getElementById('playerQNum').textContent = `Question ${qNum}`;
-          document.getElementById('playerQPrompt').textContent = qText;
-          document.getElementById('playerTimer').textContent = `${tLimit}s`;
-
-          const grid = document.getElementById('playerButtonsGrid');
-          grid.innerHTML = opts.map((opt, idx) => `
-            <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3 hover:bg-cssoNavyLight">
-              <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
-              <span>${escapeHtml(opt)}</span>
-            </button>
-          `).join('');
-        }
-      } else if (type === 'TIME_EXPIRED') {
-        if (!isHost && localPlayer) {
-          document.getElementById('playerQuestionScreen').classList.add('hidden');
-          document.getElementById('playerLockedScreen').classList.add('hidden');
-          document.getElementById('playerWinCard').classList.add('hidden');
-          document.getElementById('playerWaitingScreen').classList.remove('hidden');
-        }
-      } else if (type === 'WINNER_ANNOUNCED') {
-        activeGameState = 'WINNER';
-        if (!isHost && localPlayer && payload) {
-          document.getElementById('playerQuestionScreen').classList.add('hidden');
-          document.getElementById('playerLockedScreen').classList.add('hidden');
-          document.getElementById('playerWaitingScreen').classList.add('hidden');
-
-          const winCard = document.getElementById('playerWinCard');
-          const winTitle = document.getElementById('playerWinTitle');
-          const winSub = document.getElementById('playerWinSub');
-
-          winCard.classList.remove('hidden');
-
-          if (payload.winnerId === localPlayer.id) {
-            winTitle.textContent = "🎉 YOU WON!";
-            winSub.textContent = `Congratulations ${localPlayer.name}! You won Question #${payload.qIndex + 1} prize!`;
-            winCard.className = "p-6 rounded-2xl bg-gradient-to-b from-amber-500 to-cssoNavyDark border-4 border-cssoGold text-center space-y-4 shadow-2xl animate-bounce";
-            
-            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
-          } else {
-            winTitle.textContent = "Round Winner Announced";
-            winSub.textContent = payload.winnerName ? `Winner: ${payload.winnerName}` : "No winner for this round.";
-            winCard.className = "p-6 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-4 shadow-2xl";
-          }
-        }
-      }
-    }
-
-    // ==================== STORAGE & JSON NORMALIZER ====================
-    function loadSavedQuestions() {
-      try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          const normalized = parseAndNormalizeQuestions(parsed);
-          if (normalized && normalized.length > 0) {
-            questions = normalized;
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("Could not load saved questions:", e);
-      }
-      questions = parseAndNormalizeQuestions(DEFAULT_QUESTIONS);
-      saveQuestionsToStorage();
-    }
-
-    function saveQuestionsToStorage() {
-      try {
-        localStorage.setItem('csso_trivia_questions_bank', JSON.stringify(questions));
-      } catch(e) {
-        console.warn("localStorage error:", e);
-      }
-    }
-
-    function parseAndNormalizeQuestions(rawData) {
-      if (!rawData) return null;
-      let list = rawData;
-      if (typeof rawData === 'string') {
-        try { list = JSON.parse(rawData); } catch(e) { return null; }
-      }
-
-      if (!Array.isArray(list)) {
-        if (list && Array.isArray(list.questions)) list = list.questions;
-        else return null;
-      }
-
-      return list.map((item, idx) => {
-        const textStr = item.text || item.prompt || item.question || `Question ${idx + 1}`;
-        
-        let opts = [];
-        if (Array.isArray(item.options)) opts = item.options.map(o => String(o));
-        else if (Array.isArray(item.choices)) opts = item.choices.map(c => String(c));
-        else if (Array.isArray(item.answers)) opts = item.answers.map(a => String(a));
-        else opts = ["Option A", "Option B", "Option C", "Option D"];
-
-        let cIndex = 0;
-        if (item.correctIndex !== undefined && item.correctIndex !== null) cIndex = parseInt(item.correctIndex, 10);
-        else if (item.correct !== undefined && item.correct !== null) cIndex = parseInt(item.correct, 10);
-
-        if (isNaN(cIndex) || cIndex < 0 || cIndex >= opts.length) cIndex = 0;
-
-        let tLimit = parseInt(item.timeLimit || item.time || item.timer || 15, 10);
-        if (isNaN(tLimit) || tLimit <= 0) tLimit = 15;
-
-        return {
-          id: item.id || `q_${Date.now()}_${idx}`,
-          text: textStr,
-          options: opts,
-          correctIndex: cIndex,
-          timeLimit: tLimit
-        };
       });
-    }
 
-    // ==================== QUESTION BUILDER CRUD ====================
-    function renderQuestionsList() {
-      const container = document.getElementById('questionsList');
-      const countText = document.getElementById('qCountText');
-      if (countText) countText.textContent = questions.length;
+      roomRef.child('state').on('value', (snapshot) => {
+        const state = snapshot.val();
+        if (!state) return;
 
-      if (!container) return;
-      container.innerHTML = '';
+        activeGameState = state.activeGameState || 'LOBBY';
+        currentQIndex = state.currentQIndex || 0;
 
-      if (questions.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 italic py-4 text-center">No questions in bank. Click "Reset Defaults" or "Add New Question".</p>`;
-        return;
-      }
-
-      questions.forEach((q, idx) => {
-        const card = document.createElement('div');
-        card.className = "bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-md hover:border-slate-600 transition";
-        
-        const optionsHtml = q.options.map((opt, oIdx) => `
-          <span class="text-[11px] px-2 py-0.5 rounded ${oIdx === q.correctIndex ? 'bg-emerald-950 text-emerald-300 border border-emerald-600 font-bold' : 'bg-cssoNavyDark text-slate-400'}">
-            ${String.fromCharCode(65 + oIdx)}: ${escapeHtml(opt)}
-          </span>
-        `).join(' ');
-
-        card.innerHTML = `
-          <div class="space-y-1.5 flex-1">
-            <div class="flex items-center space-x-2">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cssoGold text-cssoNavy">#${idx + 1}</span>
-              <span class="text-xs font-semibold text-slate-400"><i class="fa-solid fa-clock mr-1"></i>${q.timeLimit}s</span>
-            </div>
-            <h4 class="text-sm font-bold text-white leading-snug">${escapeHtml(q.text)}</h4>
-            <div class="flex flex-wrap gap-1.5 pt-1">
-              ${optionsHtml}
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-1.5 self-end md:self-center">
-            <button onclick="moveQuestion(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 p-1.5 text-slate-500"' : 'class="p-1.5 text-slate-300 hover:text-cssoGold transition"'} title="Move Up">
-              <i class="fa-solid fa-arrow-up"></i>
-            </button>
-            <button onclick="moveQuestion(${idx}, 1)" ${idx === questions.length - 1 ? 'disabled class="opacity-30 p-1.5 text-slate-500"' : 'class="p-1.5 text-slate-300 hover:text-cssoGold transition"'} title="Move Down">
-              <i class="fa-solid fa-arrow-down"></i>
-            </button>
-            <button onclick="editQuestion(${idx})" class="p-1.5 text-slate-300 hover:text-emerald-400 transition" title="Edit">
-              <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteQuestion(${idx})" class="p-1.5 text-slate-300 hover:text-rose-400 transition" title="Delete">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        `;
-        container.appendChild(card);
+        if (!isHost && localPlayer) {
+          handlePlayerStateUpdate(state);
+        }
       });
-    }
 
-    function saveQuestionFromForm() {
-      const qText = document.getElementById('qText').value.trim();
-      const opt0 = document.getElementById('qOpt0').value.trim();
-      const opt1 = document.getElementById('qOpt1').value.trim();
-      const opt2 = document.getElementById('qOpt2').value.trim();
-      const opt3 = document.getElementById('qOpt3').value.trim();
-      const correctVal = parseInt(document.getElementById('qCorrect').value, 10);
-      const timerVal = parseInt(document.getElementById('qTimer').value, 10) || 15;
-      const editIdx = parseInt(document.getElementById('editQuestionIndex').value, 10);
-
-      if (!qText || !opt0 || !opt1 || !opt2 || !opt3) {
-        alert("Please fill in the question prompt and all 4 options.");
-        return;
-      }
-
-      const qObj = {
-        id: editIdx >= 0 ? questions[editIdx].id : `q_${Date.now()}`,
-        text: qText,
-        options: [opt0, opt1, opt2, opt3],
-        correctIndex: correctVal,
-        timeLimit: timerVal
-      };
-
-      if (editIdx >= 0 && editIdx < questions.length) {
-        questions[editIdx] = qObj;
-      } else {
-        questions.push(qObj);
-      }
-
-      saveQuestionsToStorage();
-      resetForm();
-      renderQuestionsList();
-    }
-
-    function editQuestion(idx) {
-      const q = questions[idx];
-      if (!q) return;
-
-      document.getElementById('editQuestionIndex').value = idx;
-      document.getElementById('qText').value = q.text;
-      document.getElementById('qOpt0').value = q.options[0] || '';
-      document.getElementById('qOpt1').value = q.options[1] || '';
-      document.getElementById('qOpt2').value = q.options[2] || '';
-      document.getElementById('qOpt3').value = q.options[3] || '';
-      document.getElementById('qCorrect').value = q.correctIndex;
-      document.getElementById('qTimer').value = q.timeLimit;
-
-      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Question #${idx + 1}`;
-      document.getElementById('cancelEditBtn').classList.remove('hidden');
-      window.scrollTo({ top: 100, behavior: 'smooth' });
-    }
-
-    function cancelQuestionEdit() {
-      resetForm();
-    }
-
-    function resetForm() {
-      document.getElementById('editQuestionIndex').value = "-1";
-      document.getElementById('qText').value = "";
-      document.getElementById('qOpt0').value = "";
-      document.getElementById('qOpt1').value = "";
-      document.getElementById('qOpt2').value = "";
-      document.getElementById('qOpt3').value = "";
-      document.getElementById('qCorrect').value = "0";
-      document.getElementById('qTimer').value = "15";
-
-      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Add New Trivia Question`;
-      document.getElementById('cancelEditBtn').classList.add('hidden');
-    }
-
-    function deleteQuestion(idx) {
-      if (confirm(`Delete Question #${idx + 1}?`)) {
-        questions.splice(idx, 1);
-        saveQuestionsToStorage();
-        renderQuestionsList();
-      }
-    }
-
-    function moveQuestion(idx, direction) {
-      const targetIdx = idx + direction;
-      if (targetIdx < 0 || targetIdx >= questions.length) return;
-      const temp = questions[idx];
-      questions[idx] = questions[targetIdx];
-      questions[targetIdx] = temp;
-      saveQuestionsToStorage();
-      renderQuestionsList();
-    }
-
-    // ==================== JSON IMPORT / EXPORT ====================
-    function exportJSONFile() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `csso_trivia_questions_${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    function importJSONFile(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const normalized = parseAndNormalizeQuestions(e.target.result);
-        if (normalized && normalized.length > 0) {
-          questions = normalized;
-          saveQuestionsToStorage();
-          renderQuestionsList();
-          alert(`Successfully imported ${questions.length} questions!`);
+      roomRef.child('responses').on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (val && val[currentQIndex]) {
+          currentResponses = Object.values(val[currentQIndex]);
         } else {
-          alert("Invalid JSON file format.");
+          currentResponses = [];
         }
-      };
-      reader.readAsText(file);
-      event.target.value = '';
-    }
-
-    function openRawJSONModal() {
-      document.getElementById('rawJsonTextArea').value = JSON.stringify(questions, null, 2);
-      document.getElementById('jsonModal').classList.remove('hidden');
-    }
-
-    function closeRawJSONModal() {
-      document.getElementById('jsonModal').classList.add('hidden');
-    }
-
-    function copyRawJSONText() {
-      const area = document.getElementById('rawJsonTextArea');
-      area.select();
-      navigator.clipboard.writeText(area.value);
-      alert("JSON copied to clipboard!");
-    }
-
-    function applyRawJSONText() {
-      const val = document.getElementById('rawJsonTextArea').value;
-      const normalized = parseAndNormalizeQuestions(val);
-      if (normalized && normalized.length > 0) {
-        questions = normalized;
-        saveQuestionsToStorage();
-        renderQuestionsList();
-        closeRawJSONModal();
-        alert(`Loaded ${questions.length} questions from raw JSON!`);
-      } else {
-        alert("Failed to parse JSON text.");
-      }
-    }
-
-    function resetDefaultQuestions() {
-      if (confirm("Reset question bank to Fall 2026 CSSO Symposium default trivia questions?")) {
-        questions = parseAndNormalizeQuestions(DEFAULT_QUESTIONS);
-        saveQuestionsToStorage();
-        renderQuestionsList();
-      }
-    }
-
-    // ==================== QR CODE & LOBBY ====================
-    function updateQrCode() {
-      const rawUrl = document.getElementById('joinUrlInput').value.trim() || 'https://profrobyn.github.io/csso/?join=true&v=3';
-      
-      let joinUrl = rawUrl;
-      if (!joinUrl.includes('room=')) {
-        joinUrl += (joinUrl.includes('?') ? '&' : '?') + `room=2026`;
-      }
-
-      const lobbyQr = document.getElementById('lobbyQrContainer');
-      const stageQr = document.getElementById('stageQrCode');
-      const stageUrl = document.getElementById('stageUrlDisplay');
-
-      if (stageUrl) stageUrl.textContent = joinUrl.replace('https://', '').replace('http://', '');
-
-      if (lobbyQr) {
-        lobbyQr.innerHTML = '';
-        new QRCode(lobbyQr, { text: joinUrl, width: 120, height: 120 });
-      }
-
-      if (stageQr) {
-        stageQr.innerHTML = '';
-        new QRCode(stageQr, { text: joinUrl, width: 180, height: 180 });
-      }
+      });
     }
 
     function launchGameAndReset() {
-      activeGameState = 'LOBBY';
-      registeredPlayers = [];
-      connectedDevices.clear();
-      currentResponses = [];
-      roundWinnersLog = [];
-      currentQIndex = 0;
-
-      sendSyncEvent('GAME_RESET', {});
-
-      updateLobbyPlayerCounts();
-      renderWinnersLog();
+      roomRef.set({
+        state: { activeGameState: 'LOBBY', currentQIndex: 0 },
+        players: {},
+        responses: {},
+        winners: {}
+      });
       setHostSubTab('stage');
       showStageScreen('lobby');
-    }
-
-    function wipeResponsesPrompt() {
-      if (confirm("Wipe all player registrations, scores, and round winner records? (Your trivia questions will remain intact)")) {
-        activeGameState = 'LOBBY';
-        registeredPlayers = [];
-        connectedDevices.clear();
-        currentResponses = [];
-        roundWinnersLog = [];
-        currentQIndex = 0;
-
-        sendSyncEvent('GAME_RESET', {});
-
-        updateLobbyPlayerCounts();
-        renderWinnersLog();
-        showStageScreen('lobby');
-        alert("All player data wiped successfully!");
-      }
-    }
-
-    function updateLobbyPlayerCounts() {
-      const count = registeredPlayers.length;
-      const devCount = Math.max(connectedDevices.size, count);
-      document.getElementById('lobbyPlayerCount').textContent = `${count} Players`;
-      document.getElementById('lobbyDeviceCount').textContent = `(${devCount} Devices Online)`;
-      document.getElementById('stagePlayerCount').textContent = `${count} Joined`;
-      document.getElementById('stageLobbyCount').textContent = `${count}`;
-    }
-
-    // ==================== AUTOMATED QUESTION STAGE PIPELINE ====================
-    function showStageScreen(screenName) {
-      document.getElementById('stageLobbyScreen').classList.add('hidden');
-      document.getElementById('stageQuestionScreen').classList.add('hidden');
-      document.getElementById('stageRandomizerScreen').classList.add('hidden');
-      document.getElementById('stageWinnerScreen').classList.add('hidden');
-
-      const badge = document.getElementById('stageBadge');
-
-      if (screenName === 'lobby') {
-        document.getElementById('stageLobbyScreen').classList.remove('hidden');
-        badge.textContent = "Lobby Phase";
-        badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cssoGold text-cssoNavy";
-        document.getElementById('stageQProgress').textContent = `Questions: ${questions.length}`;
-      } else if (screenName === 'question') {
-        document.getElementById('stageQuestionScreen').classList.remove('hidden');
-        badge.textContent = "Question Live";
-        badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500 text-cssoNavy";
-      } else if (screenName === 'randomizer') {
-        document.getElementById('stageRandomizerScreen').classList.remove('hidden');
-        badge.textContent = "Prize Draw";
-        badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500 text-white";
-      } else if (screenName === 'winner') {
-        document.getElementById('stageWinnerScreen').classList.remove('hidden');
-        badge.textContent = "Round Complete";
-        badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cssoGold text-cssoNavy";
-      }
     }
 
     function startQuestionSequence(qIndex) {
@@ -1586,15 +576,22 @@
         return;
       }
 
-      activeGameState = 'QUESTION';
       currentQIndex = qIndex;
       currentResponses = [];
       const q = questions[qIndex];
 
+      roomRef.child('state').set({
+        activeGameState: 'QUESTION',
+        currentQIndex: qIndex,
+        text: q.text,
+        options: q.options,
+        timeLimit: q.timeLimit,
+        startTime: Date.now()
+      });
+
       document.getElementById('stageQProgress').textContent = `Question ${qIndex + 1} of ${questions.length}`;
       document.getElementById('stageQNumber').textContent = `Question ${qIndex + 1} of ${questions.length}`;
       document.getElementById('stageQText').textContent = q.text;
-
       document.getElementById('stageStatsBar').classList.add('hidden');
 
       const grid = document.getElementById('stageOptionsGrid');
@@ -1606,15 +603,6 @@
       `).join('');
 
       showStageScreen('question');
-
-      const qPayload = {
-        qIndex: qIndex,
-        text: q.text,
-        options: q.options,
-        timeLimit: q.timeLimit
-      };
-
-      sendSyncEvent('QUESTION_START', qPayload);
 
       stageTimeRemaining = q.timeLimit;
       document.getElementById('stageTimer').textContent = `${stageTimeRemaining}s`;
@@ -1633,7 +621,6 @@
 
     function handleTimeExpired() {
       const q = questions[currentQIndex];
-
       const correctCard = document.getElementById(`stageOptCard_${q.correctIndex}`);
       if (correctCard) {
         correctCard.className = "p-4 rounded-xl bg-emerald-950 border-2 border-emerald-400 flex items-center space-x-3 transition shadow-lg";
@@ -1645,11 +632,13 @@
       const correctPct = totalResponses > 0 ? Math.round((correctCount / totalResponses) * 100) : 0;
 
       correctResponses.forEach(r => {
-        const p = registeredPlayers.find(pl => pl.id === r.playerId);
-        if (p) {
-          p.score += 1;
-          p.totalTime += (r.timeTaken || 5);
-        }
+        const pRef = roomRef.child(`players/${r.playerId}`);
+        pRef.transaction(player => {
+          if (player) {
+            player.score = (player.score || 0) + 1;
+          }
+          return player;
+        });
       });
 
       const statsBar = document.getElementById('stageStatsBar');
@@ -1658,18 +647,15 @@
       document.getElementById('barCorrect').style.width = `${correctPct}%`;
       document.getElementById('barIncorrect').style.width = `${100 - correctPct}%`;
 
-      sendSyncEvent('TIME_EXPIRED', { correctIndex: q.correctIndex });
+      roomRef.child('state/activeGameState').set('EXPIRED');
 
       setTimeout(() => {
         spinPrizeRandomizer();
       }, 3500);
     }
 
-    // ==================== STRICT ELIGIBILITY PRIZE RANDOMIZER ====================
     function spinPrizeRandomizer() {
-      activeGameState = 'RANDOMIZER';
       const q = questions[currentQIndex];
-      
       const correctPlayerIds = currentResponses.filter(r => r.choiceIndex === q.correctIndex).map(r => r.playerId);
       const eligiblePlayers = registeredPlayers.filter(p => correctPlayerIds.includes(p.id) && !p.wonIndividual);
 
@@ -1680,18 +666,13 @@
 
       if (eligiblePlayers.length === 0) {
         slotDisplay.textContent = "N/A";
-        candidateName.textContent = "No unawarded correct respondents for this question.";
-        
-        sendSyncEvent('WINNER_ANNOUNCED', { winnerId: null, winnerName: null, qIndex: currentQIndex });
-
-        setTimeout(() => {
-          showWinnerCard(null);
-        }, 2500);
+        candidateName.textContent = "No unawarded correct respondents.";
+        roomRef.child('state').update({ activeGameState: 'WINNER', winnerId: null });
+        setTimeout(() => showWinnerCard(null), 2000);
         return;
       }
 
       let spinCount = 0;
-      const maxSpins = 25;
       const interval = setInterval(() => {
         spinCount++;
         const randIndex = Math.floor(Math.random() * eligiblePlayers.length);
@@ -1700,33 +681,26 @@
         slotDisplay.textContent = `#${randIndex + 1}`;
         candidateName.textContent = tempCand.name;
 
-        if (spinCount >= maxSpins) {
+        if (spinCount >= 20) {
           clearInterval(interval);
-          
           const finalWinner = tempCand;
-          finalWinner.wonIndividual = true;
           
-          roundWinnersLog.push({
-            qIndex: currentQIndex,
-            winnerPlayer: finalWinner
+          roomRef.child(`players/${finalWinner.id}/wonIndividual`).set(true);
+          roomRef.child('state').update({
+            activeGameState: 'WINNER',
+            winnerId: finalWinner.id,
+            winnerName: finalWinner.name
           });
 
+          roundWinnersLog.push({ qIndex: currentQIndex, winnerPlayer: finalWinner });
           renderWinnersLog();
           showWinnerCard(finalWinner);
-
-          sendSyncEvent('WINNER_ANNOUNCED', {
-            winnerId: finalWinner.id,
-            winnerName: finalWinner.name,
-            qIndex: currentQIndex
-          });
         }
       }, 100);
     }
 
     function showWinnerCard(winner) {
-      activeGameState = 'WINNER';
       showStageScreen('winner');
-
       const nameDisplay = document.getElementById('winnerNameDisplay');
       const subDisplay = document.getElementById('winnerSubDisplay');
       const nextBtn = document.getElementById('stageNextBtn');
@@ -1734,10 +708,10 @@
       if (winner) {
         nameDisplay.textContent = winner.name;
         subDisplay.textContent = `Awarded Round #${currentQIndex + 1} Prize!`;
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
       } else {
         nameDisplay.textContent = "No Winner Awarded";
-        subDisplay.textContent = "All correct respondents have previously won or no correct answers.";
+        subDisplay.textContent = "No correct unawarded players.";
       }
 
       if (currentQIndex < questions.length - 1) {
@@ -1755,148 +729,152 @@
       }
     }
 
-    // ==================== WINNERS LOG & GRAND PODIUM ====================
-    function renderWinnersLog() {
-      const container = document.getElementById('winnersLogContainer');
-      if (!container) return;
-
-      if (roundWinnersLog.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 italic">No round winners awarded yet.</p>`;
-        return;
-      }
-
-      container.innerHTML = roundWinnersLog.map((log) => `
-        <div class="p-3 bg-cssoNavy rounded-lg border border-cssoNavyLight flex items-center justify-between text-xs">
-          <div>
-            <span class="font-bold text-cssoGold">Question #${log.qIndex + 1}:</span>
-            <span class="text-white font-semibold ml-2">${escapeHtml(log.winnerPlayer.name)}</span>
-          </div>
-          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600">Individual Winner</span>
-        </div>
-      `).join('');
-    }
-
-    function triggerGrandPodium() {
-      const sorted = [...registeredPlayers].sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return a.totalTime - b.totalTime;
-      });
-
-      const p1 = sorted[0] || { name: '---', score: 0 };
-      const p2 = sorted[1] || { name: '---', score: 0 };
-      const p3 = sorted[2] || { name: '---', score: 0 };
-
-      document.getElementById('podium1Name').textContent = p1.name;
-      document.getElementById('podium1Score').textContent = `${p1.score} Correct`;
-
-      document.getElementById('podium2Name').textContent = p2.name;
-      document.getElementById('podium2Score').textContent = `${p2.score} Correct`;
-
-      document.getElementById('podium3Name').textContent = p3.name;
-      document.getElementById('podium3Score').textContent = `${p3.score} Correct`;
-
-      document.getElementById('podiumModal').classList.remove('hidden');
-      confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
-    }
-
-    function closePodiumModal() {
-      document.getElementById('podiumModal').classList.add('hidden');
-    }
-
-    // ==================== PLAYER VIEW & INTERACTIONS ====================
     function registerPlayer() {
-      let name = document.getElementById('playerNameInput').value.trim();
-      if (!name) {
-        name = `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
-      }
+      let name = document.getElementById('playerNameInput').value.trim() || `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
+      const pId = `p_${Date.now()}_${Math.floor(Math.random()*100)}`;
 
-      registrationAckReceived = false;
-      localPlayer = {
-        id: `player_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-        name: name,
-        score: 0,
-        totalTime: 0,
-        wonIndividual: false
-      };
-
-      sendSyncEvent('PLAYER_JOINED', localPlayer);
+      localPlayer = { id: pId, name: name, score: 0, wonIndividual: false };
+      roomRef.child(`players/${pId}`).set(localPlayer);
 
       document.getElementById('playerRegisterCard').classList.add('hidden');
       document.getElementById('playerGameplayCard').classList.remove('hidden');
-
       document.getElementById('playerBadgeName').textContent = localPlayer.name;
-      document.getElementById('playerBadgeId').textContent = `ID: #${localPlayer.id.slice(-4)}`;
+      document.getElementById('playerBadgeId').textContent = `ID: #${pId.slice(-4)}`;
     }
 
     function submitPlayerAnswer(choiceIdx) {
       if (!localPlayer) return;
-
-      const timeTaken = questions[currentQIndex] ? questions[currentQIndex].timeLimit - stageTimeRemaining : 5;
-
-      const resp = {
+      roomRef.child(`responses/${currentQIndex}/${localPlayer.id}`).set({
         playerId: localPlayer.id,
         choiceIndex: choiceIdx,
-        timeTaken: timeTaken
-      };
-
-      sendSyncEvent('RESPONSE_SUBMITTED', resp);
+        timestamp: Date.now()
+      });
 
       document.getElementById('playerQuestionScreen').classList.add('hidden');
       document.getElementById('playerLockedScreen').classList.remove('hidden');
     }
 
-    // ==================== NAVIGATION ====================
+    function handlePlayerStateUpdate(state) {
+      const waitScrn = document.getElementById('playerWaitingScreen');
+      const qScrn = document.getElementById('playerQuestionScreen');
+      const lockedScrn = document.getElementById('playerLockedScreen');
+      const winCard = document.getElementById('playerWinCard');
+
+      if (state.activeGameState === 'QUESTION') {
+        waitScrn.classList.add('hidden');
+        lockedScrn.classList.add('hidden');
+        winCard.classList.add('hidden');
+        qScrn.classList.remove('hidden');
+
+        document.getElementById('playerQNum').textContent = `Question ${state.currentQIndex + 1}`;
+        document.getElementById('playerQPrompt').textContent = state.text;
+        document.getElementById('playerTimer').textContent = `${state.timeLimit}s`;
+
+        const grid = document.getElementById('playerButtonsGrid');
+        grid.innerHTML = state.options.map((opt, idx) => `
+          <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3 hover:bg-cssoNavyLight">
+            <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
+            <span>${escapeHtml(opt)}</span>
+          </button>
+        `).join('');
+      } else if (state.activeGameState === 'WINNER') {
+        qScrn.classList.add('hidden');
+        lockedScrn.classList.add('hidden');
+        waitScrn.classList.add('hidden');
+        winCard.classList.remove('hidden');
+
+        const winTitle = document.getElementById('playerWinTitle');
+        const winSub = document.getElementById('playerWinSub');
+
+        if (state.winnerId === localPlayer.id) {
+          winTitle.textContent = "🎉 YOU WON!";
+          winSub.textContent = `Congratulations ${localPlayer.name}! You won the prize!`;
+          winCard.className = "p-6 rounded-2xl bg-gradient-to-b from-amber-500 to-cssoNavyDark border-4 border-cssoGold text-center space-y-4 shadow-2xl animate-bounce";
+          confetti({ particleCount: 150, spread: 80 });
+        } else {
+          winTitle.textContent = "Round Winner Announced";
+          winSub.textContent = state.winnerName ? `Winner: ${state.winnerName}` : "No winner awarded.";
+          winCard.className = "p-6 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-4 shadow-2xl";
+        }
+      } else if (state.activeGameState === 'LOBBY') {
+        qScrn.classList.add('hidden');
+        lockedScrn.classList.add('hidden');
+        winCard.classList.add('hidden');
+        waitScrn.classList.remove('hidden');
+      }
+    }
+
+    function updateLobbyPlayerCounts() {
+      const count = registeredPlayers.length;
+      document.getElementById('lobbyPlayerCount').textContent = `${count} Players`;
+      document.getElementById('stagePlayerCount').textContent = `${count} Joined`;
+      document.getElementById('stageLobbyCount').textContent = `${count}`;
+    }
+
+    function showStageScreen(screenName) {
+      ['stageLobbyScreen', 'stageQuestionScreen', 'stageRandomizerScreen', 'stageWinnerScreen'].forEach(s => {
+        document.getElementById(s).classList.add('hidden');
+      });
+      if (screenName === 'lobby') document.getElementById('stageLobbyScreen').classList.remove('hidden');
+      if (screenName === 'question') document.getElementById('stageQuestionScreen').classList.remove('hidden');
+      if (screenName === 'randomizer') document.getElementById('stageRandomizerScreen').classList.remove('hidden');
+      if (screenName === 'winner') document.getElementById('stageWinnerScreen').classList.remove('hidden');
+    }
+
+    function updateQrCode() {
+      const rawUrl = document.getElementById('joinUrlInput').value.trim();
+      const lobbyQr = document.getElementById('lobbyQrContainer');
+      const stageQr = document.getElementById('stageQrCode');
+      document.getElementById('stageUrlDisplay').textContent = rawUrl.replace('https://', '');
+
+      lobbyQr.innerHTML = ''; stageQr.innerHTML = '';
+      new QRCode(lobbyQr, { text: rawUrl, width: 120, height: 120 });
+      new QRCode(stageQr, { text: rawUrl, width: 180, height: 180 });
+    }
+
+    function triggerGrandPodium() {
+      const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0));
+      document.getElementById('podium1Name').textContent = sorted[0] ? sorted[0].name : '---';
+      document.getElementById('podium1Score').textContent = `${sorted[0] ? sorted[0].score : 0} Correct`;
+      document.getElementById('podium2Name').textContent = sorted[1] ? sorted[1].name : '---';
+      document.getElementById('podium2Score').textContent = `${sorted[1] ? sorted[1].score : 0} Correct`;
+      document.getElementById('podium3Name').textContent = sorted[2] ? sorted[2].name : '---';
+      document.getElementById('podium3Score').textContent = `${sorted[2] ? sorted[2].score : 0} Correct`;
+      document.getElementById('podiumModal').classList.remove('hidden');
+      confetti({ particleCount: 150, spread: 90 });
+    }
+
+    function closePodiumModal() { document.getElementById('podiumModal').classList.add('hidden'); }
+    function wipeResponsesPrompt() { if (confirm("Wipe all player data?")) roomRef.set(null); }
+
     function switchMainTab(tab) {
-      const hostSec = document.getElementById('hostViewSection');
-      const playerSec = document.getElementById('playerViewSection');
-
-      const hostNav = document.getElementById('navHostBtn');
-      const playerNav = document.getElementById('navPlayerBtn');
-
       if (tab === 'host') {
-        isHost = true;
-        hostSec.classList.remove('hidden');
-        playerSec.classList.add('hidden');
-
-        hostNav.className = "px-3 py-1.5 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition";
-        playerNav.className = "px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition";
+        document.getElementById('hostViewSection').classList.remove('hidden');
+        document.getElementById('playerViewSection').classList.add('hidden');
       } else {
-        isHost = false;
-        hostSec.classList.add('hidden');
-        playerSec.classList.remove('hidden');
-
-        playerNav.className = "px-3 py-1.5 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition";
-        hostNav.className = "px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition";
+        document.getElementById('hostViewSection').classList.add('hidden');
+        document.getElementById('playerViewSection').classList.remove('hidden');
       }
     }
 
     function setHostSubTab(sub) {
-      const btnB = document.getElementById('tabBtnBuilder');
-      const btnS = document.getElementById('tabBtnStage');
-      const btnW = document.getElementById('tabBtnWinners');
-
-      const tabB = document.getElementById('hostSubTabBuilder');
-      const tabS = document.getElementById('hostSubTabStage');
-      const tabW = document.getElementById('hostSubTabWinners');
-
-      [tabB, tabS, tabW].forEach(t => t.classList.add('hidden'));
-      [btnB, btnS, btnW].forEach(b => b.className = "px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoNavyLight text-slate-200 hover:text-white");
-
-      if (sub === 'builder') {
-        tabB.classList.remove('hidden');
-        btnB.className = "px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoGold text-cssoNavy shadow-md";
-      } else if (sub === 'stage') {
-        tabS.classList.remove('hidden');
-        btnS.className = "px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoGold text-cssoNavy shadow-md";
-      } else if (sub === 'winners') {
-        tabW.classList.remove('hidden');
-        btnW.className = "px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoGold text-cssoNavy shadow-md";
-      }
+      ['hostSubTabBuilder', 'hostSubTabStage', 'hostSubTabWinners'].forEach(t => document.getElementById(t).classList.add('hidden'));
+      if (sub === 'builder') document.getElementById('hostSubTabBuilder').classList.remove('hidden');
+      if (sub === 'stage') document.getElementById('hostSubTabStage').classList.remove('hidden');
+      if (sub === 'winners') document.getElementById('hostSubTabWinners').classList.remove('hidden');
     }
 
-    function escapeHtml(str) {
-      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    function renderWinnersLog() {
+      const container = document.getElementById('winnersLogContainer');
+      container.innerHTML = roundWinnersLog.map(log => `
+        <div class="p-3 bg-cssoNavy rounded-lg border border-cssoNavyLight flex items-center justify-between text-xs">
+          <span class="text-white font-semibold">Q#${log.qIndex + 1}: ${escapeHtml(log.winnerPlayer.name)}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600">Winner</span>
+        </div>
+      `).join('');
     }
+
+    function escapeHtml(str) { return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   </script>
 </body>
 </html>
