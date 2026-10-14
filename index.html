@@ -67,7 +67,7 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col pb-28">
 
   <!-- TOP APP BAR -->
   <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-4 py-3 sticky top-0 z-40 flex items-center justify-between shadow-lg">
@@ -114,7 +114,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-tower-broadcast mr-1"></i> Live Mobile Sync Active
+            <i class="fa-solid fa-tower-broadcast mr-1"></i> Cloud REST Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -234,6 +234,7 @@
             <div class="space-y-3">
               <label class="block text-xs font-semibold text-cssoGold uppercase tracking-wider text-left">Custom Join URL (Display & QR Code)</label>
               <input type="text" id="joinUrlInput" value="https://profrobyn.github.io/csso/?join=true" oninput="updateQrCode()" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-xs text-white focus:border-cssoGold focus:outline-none">
+              
               <div class="p-3 bg-cssoNavy rounded-lg border border-cssoNavyLight text-left flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-400">Connected Audience</p>
@@ -495,6 +496,35 @@
 
   </main>
 
+  <!-- ==================== LIVE ON-SCREEN DEBUGGER PANEL ==================== -->
+  <div id="debugPanel" class="fixed bottom-0 inset-x-0 bg-cssoNavyDark/95 border-t-2 border-cssoGold backdrop-blur-md z-50 text-xs text-slate-300 font-mono shadow-2xl transition-all duration-300">
+    <div class="flex items-center justify-between px-4 py-2 bg-cssoNavy border-b border-cssoNavyLight">
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleDebugPanel()" class="font-bold text-cssoGold flex items-center gap-1.5 hover:text-white">
+          <i class="fa-solid fa-bug"></i> 🐞 Live Network Debug Console
+          <span id="debugBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">Ready</span>
+        </button>
+        <span id="roomTagDisplay" class="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">Room: csso_trivia_2026</span>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="sendTestPing()" class="px-2.5 py-1 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-600">
+          <i class="fa-solid fa-paper-plane mr-1"></i> Send Test Ping
+        </button>
+        <button onclick="clearDebugLog()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] rounded">
+          Clear
+        </button>
+        <button onclick="toggleDebugPanel()" class="p-1 text-slate-400 hover:text-white">
+          <i id="debugToggleIcon" class="fa-solid fa-chevron-down"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="debugLogContainer" class="p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1 bg-black/60">
+      <div id="debugLogContent" class="space-y-0.5 text-[11px]"></div>
+    </div>
+  </div>
+
   <!-- ==================== MODALS ==================== -->
 
   <!-- RAW JSON PASTE MODAL -->
@@ -748,7 +778,7 @@
       }
     ];
 
-    // ==================== GLOBAL STATE ====================
+    // ==================== GLOBAL STATE & ROOM ID ====================
     let questions = [];
     let registeredPlayers = []; // { id, name, score, totalTime, wonIndividual }
     let currentResponses = []; // { playerId, choiceIndex, timeTaken }
@@ -759,88 +789,208 @@
     let stageTimeRemaining = 0;
     let localPlayer = null;
 
-    // HTTPS REST & SSE CLOUD ENGINE (Port 443 Standard Web Traffic)
-    const SYNC_TOPIC = 'csso_trivia_symposium_2026_room_channel';
-    const NTFY_URL = `https://ntfy.sh/${SYNC_TOPIC}`;
+    const myDeviceId = `dev_${Math.random().toString(36).substring(2, 8)}`;
+    let currentRoomId = 'csso_trivia_2026'; // Dedicated channel name
+    const NTFY_BASE = 'https://ntfy.sh/';
     let broadcastChannel = null;
+    let processedEventKeys = new Set();
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
+      // Parse Room from URL parameters or set default
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('room')) {
+        currentRoomId = urlParams.get('room').toLowerCase().replace(/[^a-z0-9_]/g, '');
+      }
+
+      document.getElementById('roomTagDisplay').textContent = `Room: ${currentRoomId}`;
+
       loadSavedQuestions();
       renderQuestionsList();
       updateQrCode();
 
-      // Initialize Dual Local & Mobile Cloud Sync Engine
-      initDualSyncEngine();
+      // Start Debugger Console
+      initDebugConsole();
+      debugLog(`Page Loaded. Device ID: ${myDeviceId}`, 'info');
 
-      // Check URL parameters for player access
-      const urlParams = new URLSearchParams(window.location.search);
+      // Initialize Cross-Device Sync Engine
+      initSyncEngine();
+
       if (urlParams.get('join') === 'true') {
         switchMainTab('player');
       }
     });
 
-    // ==================== HYBRID LOCAL & CLOUD SYNC ENGINE ====================
-    function initDualSyncEngine() {
-      // 1. Standard Local BroadcastChannel (Same Device Tab-to-Tab)
+    // ==================== LIVE DEBUGGER ENGINE ====================
+    function initDebugConsole() {
+      window.onerror = function(msg, url, line, col, error) {
+        debugLog(`Global Error: ${msg} line ${line}:${col}`, 'error');
+        return false;
+      };
+      window.onunhandledrejection = function(e) {
+        debugLog(`Unhandled Promise Error: ${e.reason}`, 'error');
+      };
+    }
+
+    function debugLog(message, type = 'info') {
+      const logBox = document.getElementById('debugLogContent');
+      if (!logBox) return;
+
+      const time = new Date().toLocaleTimeString();
+      let color = 'text-slate-300';
+      if (type === 'error') color = 'text-rose-400 font-bold';
+      if (type === 'success') color = 'text-emerald-400 font-semibold';
+      if (type === 'warn') color = 'text-amber-300';
+
+      const entry = document.createElement('div');
+      entry.className = `${color} border-b border-slate-900 py-0.5`;
+      entry.innerHTML = `<span class="text-slate-500">[${time}]</span> ${escapeHtml(message)}`;
+
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+
+      document.getElementById('debugBadge').textContent = `${logBox.children.length} Events`;
+    }
+
+    function toggleDebugPanel() {
+      const container = document.getElementById('debugLogContainer');
+      const icon = document.getElementById('debugToggleIcon');
+      if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        icon.className = 'fa-solid fa-chevron-down';
+      } else {
+        container.classList.add('hidden');
+        icon.className = 'fa-solid fa-chevron-up';
+      }
+    }
+
+    function clearDebugLog() {
+      const logBox = document.getElementById('debugLogContent');
+      if (logBox) logBox.innerHTML = '';
+      debugLog('Debug log cleared', 'info');
+    }
+
+    function sendTestPing() {
+      sendSyncEvent('PING_TEST', { message: 'Hello from device!' });
+      debugLog(`Sent test PING out to cloud room [${currentRoomId}]`, 'info');
+    }
+
+    // ==================== FIREWALL-PROOF CLOUD SYNC ====================
+    function initSyncEngine() {
+      // 1. Local BroadcastChannel
       if (typeof BroadcastChannel !== 'undefined') {
         try {
-          broadcastChannel = new BroadcastChannel('csso_local_channel');
+          broadcastChannel = new BroadcastChannel(`csso_chan_${currentRoomId}`);
           broadcastChannel.onmessage = (e) => {
-            if (e && e.data) handleSyncEvent(e.data);
+            if (e && e.data) processReceivedPayload(e.data);
           };
         } catch(e){}
       }
 
-      // 2. Storage Event Listener (Dual-Window Fallback)
+      // 2. Storage Bus
       window.addEventListener('storage', (e) => {
-        if (e.key === 'csso_sync_bus' && e.newValue) {
-          try {
-            handleSyncEvent(JSON.parse(e.newValue));
-          } catch(err){}
+        if (e.key === `csso_bus_${currentRoomId}` && e.newValue) {
+          try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
         }
       });
 
-      // 3. Mobile Cloud SSE Listener (HTTPS Port 443 - Works across Cellular Data & Wi-Fi)
+      // 3. Mobile Cloud SSE Listener
       try {
-        const eventSource = new EventSource(`${NTFY_URL}/sse`);
-        eventSource.onmessage = (event) => {
+        const sseUrl = `${NTFY_BASE}${currentRoomId}/sse`;
+        debugLog(`Connecting Cloud SSE -> ${sseUrl}`, 'info');
+        const sse = new EventSource(sseUrl);
+
+        sse.onopen = () => debugLog(`Cloud SSE Connection Established!`, 'success');
+        sse.onerror = (err) => debugLog(`SSE Connection Re-establishing...`, 'warn');
+        sse.onmessage = (event) => {
           try {
             const wrapper = JSON.parse(event.data);
             if (wrapper && wrapper.message) {
-              const eventObj = JSON.parse(wrapper.message);
-              handleSyncEvent(eventObj);
+              const payload = JSON.parse(wrapper.message);
+              processReceivedPayload(payload);
             }
           } catch(e){}
         };
       } catch(e) {
-        console.warn("Cloud SSE init error:", e);
+        debugLog(`SSE Error: ${e.message}`, 'error');
       }
+
+      // 4. Fallback Polling (GET https://ntfy.sh/ROOM/json?since=15s) every 1.5s
+      setInterval(() => {
+        fetch(`${NTFY_BASE}${currentRoomId}/json?since=15s`)
+          .then(res => res.text())
+          .then(text => {
+            if (!text) return;
+            const lines = text.trim().split('\n');
+            lines.forEach(line => {
+              if (!line) return;
+              try {
+                const wrapper = JSON.parse(line);
+                if (wrapper && wrapper.message) {
+                  const payload = JSON.parse(wrapper.message);
+                  processReceivedPayload(payload);
+                }
+              } catch(e){}
+            });
+          })
+          .catch(err => {
+            // Background poll log suppressed unless error
+          });
+      }, 1500);
     }
 
     function sendSyncEvent(type, payload) {
-      const eventObj = { type, payload, _ts: Date.now() + Math.random() };
+      const eventObj = {
+        type: type,
+        payload: payload,
+        senderId: myDeviceId,
+        room: currentRoomId,
+        _ts: Date.now() + Math.random()
+      };
 
-      // Dispatch Local
+      debugLog(`Sending -> ${type}`, 'info');
+
+      // Local broadcasts
       if (broadcastChannel) {
         try { broadcastChannel.postMessage(eventObj); } catch(e){}
       }
-      try { localStorage.setItem('csso_sync_bus', JSON.stringify(eventObj)); } catch(e){}
+      try { localStorage.setItem(`csso_bus_${currentRoomId}`, JSON.stringify(eventObj)); } catch(e){}
 
-      // Dispatch Mobile Cloud via HTTPS POST
-      fetch(NTFY_URL, {
+      // Cloud Publish via HTTPS POST
+      fetch(`${NTFY_BASE}${currentRoomId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(eventObj)
-      }).catch(err => console.warn("Cloud publish exception:", err));
+      }).then(res => {
+        if (res.ok) debugLog(`Cloud POST HTTP 200 (${type})`, 'success');
+        else debugLog(`Cloud POST HTTP ${res.status}`, 'error');
+      }).catch(err => {
+        debugLog(`Cloud Publish Network Error: ${err.message}`, 'error');
+      });
+    }
+
+    function processReceivedPayload(eventObj) {
+      if (!eventObj || !eventObj.type || !eventObj._ts) return;
+
+      const eventKey = `${eventObj.type}_${eventObj._ts}`;
+      if (processedEventKeys.has(eventKey)) return;
+      processedEventKeys.add(eventKey);
+
+      if (processedEventKeys.size > 200) {
+        const arr = Array.from(processedEventKeys);
+        processedEventKeys = new Set(arr.slice(50));
+      }
+
+      debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId || 'unknown'}`, 'success');
+      handleSyncEvent(eventObj);
     }
 
     function handleSyncEvent(eventObj) {
-      if (!eventObj || !eventObj.type) return;
+      const { type, payload, senderId } = eventObj;
 
-      const { type, payload } = eventObj;
-
-      if (type === 'PLAYER_JOINED') {
+      if (type === 'PING_TEST') {
+        debugLog(`Received Test PING from device [${senderId}]`, 'warn');
+      } else if (type === 'PLAYER_JOINED') {
         if (payload && payload.id && payload.name) {
           if (!registeredPlayers.some(p => p.id === payload.id)) {
             registeredPlayers.push({
@@ -851,12 +1001,14 @@
               wonIndividual: false
             });
             updateLobbyPlayerCounts();
+            debugLog(`Player Registered: ${payload.name} (Total: ${registeredPlayers.length})`, 'success');
           }
         }
       } else if (type === 'RESPONSE_SUBMITTED') {
         if (payload && payload.playerId && payload.choiceIndex !== undefined) {
           if (!currentResponses.some(r => r.playerId === payload.playerId)) {
             currentResponses.push(payload);
+            debugLog(`Response Recorded for Player ID #${payload.playerId.slice(-4)}`, 'info');
           }
         }
       } else if (type === 'GAME_RESET') {
@@ -871,6 +1023,7 @@
           document.getElementById('playerRegisterCard').classList.remove('hidden');
           localPlayer = null;
         }
+        debugLog(`Game Reset Event Received`, 'warn');
       } else if (type === 'QUESTION_START') {
         if (localPlayer) {
           document.getElementById('playerWaitingScreen').classList.add('hidden');
@@ -1206,8 +1359,13 @@
 
     // ==================== QR CODE & LOBBY ====================
     function updateQrCode() {
-      const joinUrl = document.getElementById('joinUrlInput').value.trim() || 'https://profrobyn.github.io/csso/?join=true';
+      const rawUrl = document.getElementById('joinUrlInput').value.trim() || 'https://profrobyn.github.io/csso/?join=true';
       
+      let joinUrl = rawUrl;
+      if (!joinUrl.includes('room=')) {
+        joinUrl += (joinUrl.includes('?') ? '&' : '?') + `room=${currentRoomId}`;
+      }
+
       const lobbyQr = document.getElementById('lobbyQrContainer');
       const stageQr = document.getElementById('stageQrCode');
       const stageUrl = document.getElementById('stageUrlDisplay');
