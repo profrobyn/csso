@@ -323,8 +323,10 @@
               Question Prompt Text...
             </h2>
 
-            <!-- Options Grid -->
+            <!-- Options Display Grid (Stage View for Projector) -->
             <div id="stageOptionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"></div>
+
+            <p class="text-[11px] text-slate-400 italic text-center">Stage Control View (Display on Projector/Zoom) — Audience selects answers on smartphones.</p>
 
             <!-- Stats Breakdown Bar -->
             <div id="stageStatsBar" class="hidden bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight space-y-2">
@@ -520,7 +522,7 @@
       </div>
     </div>
 
-    <div id="debugLogContainer" class="p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1 bg-black/60">
+    <div id="debugLogContainer" class="p-3 max-h-40 overflow-y-auto custom-scrollbar space-y-1 bg-black/60 hidden">
       <div id="debugLogContent" class="space-y-0.5 text-[11px]"></div>
     </div>
   </div>
@@ -790,14 +792,13 @@
     let localPlayer = null;
 
     const myDeviceId = `dev_${Math.random().toString(36).substring(2, 8)}`;
-    let currentRoomId = 'csso_trivia_2026'; // Dedicated channel name
+    let currentRoomId = 'csso_trivia_2026';
     const NTFY_BASE = 'https://ntfy.sh/';
     let broadcastChannel = null;
     let processedEventKeys = new Set();
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
-      // Parse Room from URL parameters or set default
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('room')) {
         currentRoomId = urlParams.get('room').toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -809,11 +810,9 @@
       renderQuestionsList();
       updateQrCode();
 
-      // Start Debugger Console
       initDebugConsole();
       debugLog(`Page Loaded. Device ID: ${myDeviceId}`, 'info');
 
-      // Initialize Cross-Device Sync Engine
       initSyncEngine();
 
       if (urlParams.get('join') === 'true') {
@@ -877,7 +876,6 @@
 
     // ==================== FIREWALL-PROOF CLOUD SYNC ====================
     function initSyncEngine() {
-      // 1. Local BroadcastChannel
       if (typeof BroadcastChannel !== 'undefined') {
         try {
           broadcastChannel = new BroadcastChannel(`csso_chan_${currentRoomId}`);
@@ -887,21 +885,19 @@
         } catch(e){}
       }
 
-      // 2. Storage Bus
       window.addEventListener('storage', (e) => {
         if (e.key === `csso_bus_${currentRoomId}` && e.newValue) {
           try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
         }
       });
 
-      // 3. Mobile Cloud SSE Listener
       try {
         const sseUrl = `${NTFY_BASE}${currentRoomId}/sse`;
         debugLog(`Connecting Cloud SSE -> ${sseUrl}`, 'info');
         const sse = new EventSource(sseUrl);
 
         sse.onopen = () => debugLog(`Cloud SSE Connection Established!`, 'success');
-        sse.onerror = (err) => debugLog(`SSE Connection Re-establishing...`, 'warn');
+        sse.onerror = () => debugLog(`SSE Connection Re-establishing...`, 'warn');
         sse.onmessage = (event) => {
           try {
             const wrapper = JSON.parse(event.data);
@@ -915,7 +911,6 @@
         debugLog(`SSE Error: ${e.message}`, 'error');
       }
 
-      // 4. Fallback Polling (GET https://ntfy.sh/ROOM/json?since=15s) every 1.5s
       setInterval(() => {
         fetch(`${NTFY_BASE}${currentRoomId}/json?since=15s`)
           .then(res => res.text())
@@ -933,9 +928,7 @@
               } catch(e){}
             });
           })
-          .catch(err => {
-            // Background poll log suppressed unless error
-          });
+          .catch(() => {});
       }, 1500);
     }
 
@@ -948,24 +941,22 @@
         _ts: Date.now() + Math.random()
       };
 
+      const bodyStr = JSON.stringify(eventObj);
       debugLog(`Sending -> ${type}`, 'info');
 
-      // Local broadcasts
       if (broadcastChannel) {
         try { broadcastChannel.postMessage(eventObj); } catch(e){}
       }
-      try { localStorage.setItem(`csso_bus_${currentRoomId}`, JSON.stringify(eventObj)); } catch(e){}
+      try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
 
-      // Cloud Publish via HTTPS POST
       fetch(`${NTFY_BASE}${currentRoomId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventObj)
+        body: bodyStr
       }).then(res => {
         if (res.ok) debugLog(`Cloud POST HTTP 200 (${type})`, 'success');
         else debugLog(`Cloud POST HTTP ${res.status}`, 'error');
       }).catch(err => {
-        debugLog(`Cloud Publish Network Error: ${err.message}`, 'error');
+        debugLog(`Cloud Publish Error: ${err.message}`, 'error');
       });
     }
 
@@ -1031,13 +1022,18 @@
           document.getElementById('playerWinCard').classList.add('hidden');
           document.getElementById('playerQuestionScreen').classList.remove('hidden');
 
-          document.getElementById('playerQNum').textContent = `Question ${payload.qIndex + 1}`;
-          document.getElementById('playerQPrompt').textContent = payload.text;
-          document.getElementById('playerTimer').textContent = `${payload.timeLimit}s`;
+          const qNum = (payload && payload.qIndex !== undefined) ? payload.qIndex + 1 : 1;
+          const qText = (payload && payload.text) ? payload.text : "Trivia Question Prompt";
+          const tLimit = (payload && payload.timeLimit) ? payload.timeLimit : 15;
+          const opts = (payload && Array.isArray(payload.options)) ? payload.options : ["Option A", "Option B", "Option C", "Option D"];
+
+          document.getElementById('playerQNum').textContent = `Question ${qNum}`;
+          document.getElementById('playerQPrompt').textContent = qText;
+          document.getElementById('playerTimer').textContent = `${tLimit}s`;
 
           const grid = document.getElementById('playerButtonsGrid');
-          grid.innerHTML = payload.options.map((opt, idx) => `
-            <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3">
+          grid.innerHTML = opts.map((opt, idx) => `
+            <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3 hover:bg-cssoNavyLight">
               <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
               <span>${escapeHtml(opt)}</span>
             </button>
@@ -1581,7 +1577,6 @@
           renderWinnersLog();
           showWinnerCard(finalWinner);
 
-          // Broadcast Winner Announcement to Player Phones
           sendSyncEvent('WINNER_ANNOUNCED', {
             winnerId: finalWinner.id,
             winnerName: finalWinner.name,
@@ -1632,7 +1627,7 @@
         return;
       }
 
-      container.innerHTML = roundWinnersLog.map((log, idx) => `
+      container.innerHTML = roundWinnersLog.map((log) => `
         <div class="p-3 bg-cssoNavy rounded-lg border border-cssoNavyLight flex items-center justify-between text-xs">
           <div>
             <span class="font-bold text-cssoGold">Question #${log.qIndex + 1}:</span>
