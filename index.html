@@ -12,10 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- Firebase Compatibility CDN Scripts -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- MQTT.js for Realtime WebSocket Cloud Relay across Cellular/Wi-Fi Networks -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -117,8 +115,8 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-wifi mr-1"></i> Cloud Synced
+          <span id="mqttStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-amber-900/60 text-amber-300 border border-amber-700">
+            <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Connecting Cloud...
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -743,33 +741,6 @@
       }
     ];
 
-    // ==================== FIREBASE REALTIME DB INITIALIZATION ====================
-    const firebaseConfig = {
-      apiKey: "AIzaSyDemoKeyForCSSOTriviaApp2026",
-      authDomain: "csso-trivia-default.firebaseapp.com",
-      databaseURL: "https://csso-trivia-default-rtdb.firebaseio.com",
-      projectId: "csso-trivia-default",
-      storageBucket: "csso-trivia-default.appspot.com",
-      messagingSenderId: "100000000000",
-      appId: "1:100000000000:web:1234567890abcdef"
-    };
-
-    let db = null;
-    let syncChannel = null;
-
-    try {
-      if (typeof firebase !== 'undefined') {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-      }
-    } catch(e) {
-      console.warn("Firebase fallback mode:", e);
-    }
-
-    if (typeof BroadcastChannel !== 'undefined') {
-      syncChannel = new BroadcastChannel('csso_trivia_sync');
-    }
-
     // ==================== GLOBAL STATE ====================
     let questions = [];
     let registeredPlayers = []; // { id, name, score, totalTime, wonIndividual }
@@ -780,6 +751,13 @@
     let stageTimerInterval = null;
     let stageTimeRemaining = 0;
     let localPlayer = null;
+
+    // MQTT Realtime Cloud Client
+    let mqttClient = null;
+    const MQTT_BROKER = 'wss://broker.hivemq.com:8884/mqtt';
+    const TOPIC_JOIN = 'csso_trivia_2026/joins';
+    const TOPIC_RESP = 'csso_trivia_2026/responses';
+    const TOPIC_STATE = 'csso_trivia_2026/state';
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -793,51 +771,66 @@
         switchMainTab('player');
       }
 
-      // Initialize Firebase Listeners
-      initRealtimeSync();
+      // Initialize HiveMQ MQTT Cloud Relay
+      initMqttCloudSync();
     });
 
-    function initRealtimeSync() {
-      // 1. Listen for player registrations
-      if (db) {
-        db.ref('csso_game/players').on('value', (snapshot) => {
-          const val = snapshot.val();
-          if (val) {
-            registeredPlayers = Object.values(val);
-          } else {
-            registeredPlayers = [];
+    function initMqttCloudSync() {
+      try {
+        const clientId = 'csso_client_' + Math.random().toString(16).substr(2, 8);
+        mqttClient = mqtt.connect(MQTT_BROKER, { clientId, keepalive: 30 });
+
+        mqttClient.on('connect', () => {
+          const badge = document.getElementById('mqttStatusBadge');
+          if (badge) {
+            badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700";
+            badge.innerHTML = `<i class="fa-solid fa-wifi mr-1"></i> Cloud Synced`;
           }
-          updateLobbyPlayerCounts();
+
+          mqttClient.subscribe([TOPIC_JOIN, TOPIC_RESP, TOPIC_STATE], (err) => {
+            if (err) console.error("MQTT Subscribe Error:", err);
+          });
         });
 
-        // 2. Listen for current question responses
-        db.ref('csso_game/responses').on('value', (snapshot) => {
-          const val = snapshot.val();
-          if (val && val[currentQIndex]) {
-            currentResponses = Object.values(val[currentQIndex]);
-          } else {
-            currentResponses = [];
+        mqttClient.on('message', (topic, message) => {
+          try {
+            const data = JSON.parse(message.toString());
+            handleCloudMessage(topic, data);
+          } catch(e) {
+            console.warn("MQTT Message Parse Error:", e);
           }
         });
 
-        // 3. Listen for game state changes on mobile devices
-        db.ref('csso_game/gameState').on('value', (snapshot) => {
-          const state = snapshot.val();
-          if (!state) return;
-          handleGameStateUpdate(state);
+        mqttClient.on('error', (err) => {
+          console.warn("MQTT Error:", err);
         });
+      } catch(e) {
+        console.warn("MQTT Init Exception:", e);
       }
+    }
 
-      // Local cross-tab fallback
-      if (syncChannel) {
-        syncChannel.onmessage = (e) => {
-          if (e.data && e.data.type === 'PLAYER_JOINED') {
-            if (!registeredPlayers.some(p => p.id === e.data.payload.id)) {
-              registeredPlayers.push(e.data.payload);
-              updateLobbyPlayerCounts();
-            }
+    function handleCloudMessage(topic, data) {
+      if (topic === TOPIC_JOIN) {
+        if (data && data.id && data.name) {
+          if (!registeredPlayers.some(p => p.id === data.id)) {
+            registeredPlayers.push({
+              id: data.id,
+              name: data.name,
+              score: 0,
+              totalTime: 0,
+              wonIndividual: false
+            });
+            updateLobbyPlayerCounts();
           }
-        };
+        }
+      } else if (topic === TOPIC_RESP) {
+        if (data && data.playerId !== undefined && data.choiceIndex !== undefined) {
+          if (!currentResponses.some(r => r.playerId === data.playerId)) {
+            currentResponses.push(data);
+          }
+        }
+      } else if (topic === TOPIC_STATE) {
+        handleGameStateUpdate(data);
       }
     }
 
@@ -1147,11 +1140,7 @@
       roundWinnersLog = [];
       currentQIndex = 0;
 
-      if (db) {
-        db.ref('csso_game/players').remove();
-        db.ref('csso_game/responses').remove();
-        db.ref('csso_game/gameState').set({ status: 'LOBBY', timestamp: Date.now() });
-      }
+      publishMqtt(TOPIC_STATE, { status: 'LOBBY', timestamp: Date.now() });
 
       updateLobbyPlayerCounts();
       renderWinnersLog();
@@ -1166,11 +1155,7 @@
         roundWinnersLog = [];
         currentQIndex = 0;
 
-        if (db) {
-          db.ref('csso_game/players').remove();
-          db.ref('csso_game/responses').remove();
-          db.ref('csso_game/gameState').set({ status: 'LOBBY', timestamp: Date.now() });
-        }
+        publishMqtt(TOPIC_STATE, { status: 'LOBBY', timestamp: Date.now() });
 
         updateLobbyPlayerCounts();
         renderWinnersLog();
@@ -1241,17 +1226,15 @@
 
       showStageScreen('question');
 
-      // Publish to Cloud Database
-      if (db) {
-        db.ref('csso_game/gameState').set({
-          status: 'QUESTION_LIVE',
-          qIndex: qIndex,
-          text: q.text,
-          options: q.options,
-          timeLimit: q.timeLimit,
-          timestamp: Date.now()
-        });
-      }
+      // Publish to Cloud WebSocket
+      publishMqtt(TOPIC_STATE, {
+        status: 'QUESTION_LIVE',
+        qIndex: qIndex,
+        text: q.text,
+        options: q.options,
+        timeLimit: q.timeLimit,
+        timestamp: Date.now()
+      });
 
       // Start Countdown
       stageTimeRemaining = q.timeLimit;
@@ -1297,9 +1280,7 @@
       document.getElementById('barCorrect').style.width = `${correctPct}%`;
       document.getElementById('barIncorrect').style.width = `${100 - correctPct}%`;
 
-      if (db) {
-        db.ref('csso_game/gameState').set({ status: 'TIME_EXPIRED', correctIndex: q.correctIndex, timestamp: Date.now() });
-      }
+      publishMqtt(TOPIC_STATE, { status: 'TIME_EXPIRED', correctIndex: q.correctIndex, timestamp: Date.now() });
 
       setTimeout(() => {
         spinPrizeRandomizer();
@@ -1450,12 +1431,8 @@
         wonIndividual: false
       };
 
-      if (db) {
-        db.ref('csso_game/players/' + localPlayer.id).set(localPlayer);
-      } else {
-        registeredPlayers.push(localPlayer);
-        updateLobbyPlayerCounts();
-      }
+      // Publish Registration to Cloud
+      publishMqtt(TOPIC_JOIN, localPlayer);
 
       document.getElementById('playerRegisterCard').classList.add('hidden');
       document.getElementById('playerGameplayCard').classList.remove('hidden');
@@ -1475,11 +1452,7 @@
         timeTaken: timeTaken
       };
 
-      if (db) {
-        db.ref(`csso_game/responses/${currentQIndex}/${localPlayer.id}`).set(resp);
-      } else {
-        currentResponses.push(resp);
-      }
+      publishMqtt(TOPIC_RESP, resp);
 
       document.getElementById('playerQuestionScreen').classList.add('hidden');
       document.getElementById('playerLockedScreen').classList.remove('hidden');
@@ -1512,6 +1485,12 @@
         document.getElementById('playerQuestionScreen').classList.add('hidden');
         document.getElementById('playerLockedScreen').classList.add('hidden');
         document.getElementById('playerWaitingScreen').classList.remove('hidden');
+      }
+    }
+
+    function publishMqtt(topic, payload) {
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish(topic, JSON.stringify(payload));
       }
     }
 
