@@ -114,7 +114,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-bolt mr-1"></i> Firewall-Proof Sync Active
+            <i class="fa-solid fa-tower-broadcast mr-1"></i> Live Mobile Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -478,6 +478,17 @@
           <p class="text-xs text-slate-300">Sit tight. Waiting for time to expire and winner draw.</p>
         </div>
 
+        <!-- PLAYER WIN / ROUND ANNOUNCEMENT CARD -->
+        <div id="playerWinCard" class="hidden p-6 rounded-2xl border-2 text-center space-y-4 transition-all">
+          <div id="playerWinIcon" class="w-16 h-16 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-3xl shadow-lg">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <div>
+            <h3 id="playerWinTitle" class="text-2xl font-black text-white">Winner Announced!</h3>
+            <p id="playerWinSub" class="text-xs text-slate-300 mt-1">Checking round prize status...</p>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -748,8 +759,9 @@
     let stageTimeRemaining = 0;
     let localPlayer = null;
 
-    // Dual Sync Controllers
-    const BROADCAST_CHANNEL_NAME = 'csso_trivia_local_sync_channel';
+    // HTTPS REST & SSE CLOUD ENGINE (Port 443 Standard Web Traffic)
+    const SYNC_TOPIC = 'csso_trivia_symposium_2026_room_channel';
+    const NTFY_URL = `https://ntfy.sh/${SYNC_TOPIC}`;
     let broadcastChannel = null;
 
     // ==================== INITIALIZATION ====================
@@ -758,68 +770,82 @@
       renderQuestionsList();
       updateQrCode();
 
-      // Initialize Native Local Direct Sync
-      initLocalSyncEngine();
+      // Initialize Dual Local & Mobile Cloud Sync Engine
+      initDualSyncEngine();
 
-      // Check URL parameters for direct player access
+      // Check URL parameters for player access
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('join') === 'true') {
         switchMainTab('player');
       }
     });
 
-    // ==================== LOCAL DIRECT SYNC ENGINE ====================
-    function initLocalSyncEngine() {
-      // 1. BroadcastChannel Engine
+    // ==================== HYBRID LOCAL & CLOUD SYNC ENGINE ====================
+    function initDualSyncEngine() {
+      // 1. Standard Local BroadcastChannel (Same Device Tab-to-Tab)
       if (typeof BroadcastChannel !== 'undefined') {
         try {
-          broadcastChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+          broadcastChannel = new BroadcastChannel('csso_local_channel');
           broadcastChannel.onmessage = (e) => {
-            if (e && e.data) handleSyncPayload(e.data);
+            if (e && e.data) handleSyncEvent(e.data);
           };
-        } catch(e) {
-          console.warn("BroadcastChannel error:", e);
-        }
-      }
-
-      // 2. Storage Event Listener (Ensures sync between windows/tabs even on locked networks)
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'csso_sync_bus' && e.newValue) {
-          try {
-            const payload = JSON.parse(e.newValue);
-            handleSyncPayload(payload);
-          } catch(err){}
-        }
-      });
-    }
-
-    function dispatchSyncPayload(type, data) {
-      const payloadObj = { type, data, _ts: Date.now() + Math.random() };
-
-      // Dispatch via BroadcastChannel
-      if (broadcastChannel) {
-        try {
-          broadcastChannel.postMessage(payloadObj);
         } catch(e){}
       }
 
-      // Dispatch via LocalStorage Event Bus
+      // 2. Storage Event Listener (Dual-Window Fallback)
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'csso_sync_bus' && e.newValue) {
+          try {
+            handleSyncEvent(JSON.parse(e.newValue));
+          } catch(err){}
+        }
+      });
+
+      // 3. Mobile Cloud SSE Listener (HTTPS Port 443 - Works across Cellular Data & Wi-Fi)
       try {
-        localStorage.setItem('csso_sync_bus', JSON.stringify(payloadObj));
-      } catch(e){}
+        const eventSource = new EventSource(`${NTFY_URL}/sse`);
+        eventSource.onmessage = (event) => {
+          try {
+            const wrapper = JSON.parse(event.data);
+            if (wrapper && wrapper.message) {
+              const eventObj = JSON.parse(wrapper.message);
+              handleSyncEvent(eventObj);
+            }
+          } catch(e){}
+        };
+      } catch(e) {
+        console.warn("Cloud SSE init error:", e);
+      }
     }
 
-    function handleSyncPayload(payload) {
-      if (!payload || !payload.type) return;
+    function sendSyncEvent(type, payload) {
+      const eventObj = { type, payload, _ts: Date.now() + Math.random() };
 
-      const { type, data } = payload;
+      // Dispatch Local
+      if (broadcastChannel) {
+        try { broadcastChannel.postMessage(eventObj); } catch(e){}
+      }
+      try { localStorage.setItem('csso_sync_bus', JSON.stringify(eventObj)); } catch(e){}
 
-      if (type === 'PLAYER_REGISTERED') {
-        if (data && data.id && data.name) {
-          if (!registeredPlayers.some(p => p.id === data.id)) {
+      // Dispatch Mobile Cloud via HTTPS POST
+      fetch(NTFY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventObj)
+      }).catch(err => console.warn("Cloud publish exception:", err));
+    }
+
+    function handleSyncEvent(eventObj) {
+      if (!eventObj || !eventObj.type) return;
+
+      const { type, payload } = eventObj;
+
+      if (type === 'PLAYER_JOINED') {
+        if (payload && payload.id && payload.name) {
+          if (!registeredPlayers.some(p => p.id === payload.id)) {
             registeredPlayers.push({
-              id: data.id,
-              name: data.name,
+              id: payload.id,
+              name: payload.name,
               score: 0,
               totalTime: 0,
               wonIndividual: false
@@ -828,9 +854,9 @@
           }
         }
       } else if (type === 'RESPONSE_SUBMITTED') {
-        if (data && data.playerId && data.choiceIndex !== undefined) {
-          if (!currentResponses.some(r => r.playerId === data.playerId)) {
-            currentResponses.push(data);
+        if (payload && payload.playerId && payload.choiceIndex !== undefined) {
+          if (!currentResponses.some(r => r.playerId === payload.playerId)) {
+            currentResponses.push(payload);
           }
         }
       } else if (type === 'GAME_RESET') {
@@ -849,14 +875,15 @@
         if (localPlayer) {
           document.getElementById('playerWaitingScreen').classList.add('hidden');
           document.getElementById('playerLockedScreen').classList.add('hidden');
+          document.getElementById('playerWinCard').classList.add('hidden');
           document.getElementById('playerQuestionScreen').classList.remove('hidden');
 
-          document.getElementById('playerQNum').textContent = `Question ${data.qIndex + 1}`;
-          document.getElementById('playerQPrompt').textContent = data.text;
-          document.getElementById('playerTimer').textContent = `${data.timeLimit}s`;
+          document.getElementById('playerQNum').textContent = `Question ${payload.qIndex + 1}`;
+          document.getElementById('playerQPrompt').textContent = payload.text;
+          document.getElementById('playerTimer').textContent = `${payload.timeLimit}s`;
 
           const grid = document.getElementById('playerButtonsGrid');
-          grid.innerHTML = data.options.map((opt, idx) => `
+          grid.innerHTML = payload.options.map((opt, idx) => `
             <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3">
               <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
               <span>${escapeHtml(opt)}</span>
@@ -867,7 +894,33 @@
         if (localPlayer) {
           document.getElementById('playerQuestionScreen').classList.add('hidden');
           document.getElementById('playerLockedScreen').classList.add('hidden');
+          document.getElementById('playerWinCard').classList.add('hidden');
           document.getElementById('playerWaitingScreen').classList.remove('hidden');
+        }
+      } else if (type === 'WINNER_ANNOUNCED') {
+        if (localPlayer && payload) {
+          document.getElementById('playerQuestionScreen').classList.add('hidden');
+          document.getElementById('playerLockedScreen').classList.add('hidden');
+          document.getElementById('playerWaitingScreen').classList.add('hidden');
+
+          const winCard = document.getElementById('playerWinCard');
+          const winTitle = document.getElementById('playerWinTitle');
+          const winSub = document.getElementById('playerWinSub');
+
+          winCard.classList.remove('hidden');
+
+          if (payload.winnerId === localPlayer.id) {
+            winTitle.textContent = "🎉 YOU WON!";
+            winSub.textContent = `Congratulations ${localPlayer.name}! You won Question #${payload.qIndex + 1} prize!`;
+            winCard.className = "p-6 rounded-2xl bg-gradient-to-b from-amber-500 to-cssoNavyDark border-4 border-cssoGold text-center space-y-4 shadow-2xl animate-bounce";
+            
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
+          } else {
+            winTitle.textContent = "Round Winner Announced";
+            winSub.textContent = payload.winnerName ? `Winner: ${payload.winnerName}` : "No winner for this round.";
+            winCard.className = "p-6 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-4 shadow-2xl";
+          }
         }
       }
     }
@@ -1178,7 +1231,7 @@
       roundWinnersLog = [];
       currentQIndex = 0;
 
-      dispatchSyncPayload('GAME_RESET', {});
+      sendSyncEvent('GAME_RESET', {});
 
       updateLobbyPlayerCounts();
       renderWinnersLog();
@@ -1193,7 +1246,7 @@
         roundWinnersLog = [];
         currentQIndex = 0;
 
-        dispatchSyncPayload('GAME_RESET', {});
+        sendSyncEvent('GAME_RESET', {});
 
         updateLobbyPlayerCounts();
         renderWinnersLog();
@@ -1264,7 +1317,7 @@
 
       showStageScreen('question');
 
-      dispatchSyncPayload('QUESTION_START', {
+      sendSyncEvent('QUESTION_START', {
         qIndex: qIndex,
         text: q.text,
         options: q.options,
@@ -1315,7 +1368,7 @@
       document.getElementById('barCorrect').style.width = `${correctPct}%`;
       document.getElementById('barIncorrect').style.width = `${100 - correctPct}%`;
 
-      dispatchSyncPayload('TIME_EXPIRED', { correctIndex: q.correctIndex });
+      sendSyncEvent('TIME_EXPIRED', { correctIndex: q.correctIndex });
 
       setTimeout(() => {
         spinPrizeRandomizer();
@@ -1338,6 +1391,8 @@
         slotDisplay.textContent = "N/A";
         candidateName.textContent = "No unawarded correct respondents for this question.";
         
+        sendSyncEvent('WINNER_ANNOUNCED', { winnerId: null, winnerName: null, qIndex: currentQIndex });
+
         setTimeout(() => {
           showWinnerCard(null);
         }, 2500);
@@ -1367,6 +1422,13 @@
 
           renderWinnersLog();
           showWinnerCard(finalWinner);
+
+          // Broadcast Winner Announcement to Player Phones
+          sendSyncEvent('WINNER_ANNOUNCED', {
+            winnerId: finalWinner.id,
+            winnerName: finalWinner.name,
+            qIndex: currentQIndex
+          });
         }
       }, 100);
     }
@@ -1466,7 +1528,7 @@
         wonIndividual: false
       };
 
-      dispatchSyncPayload('PLAYER_REGISTERED', localPlayer);
+      sendSyncEvent('PLAYER_JOINED', localPlayer);
 
       document.getElementById('playerRegisterCard').classList.add('hidden');
       document.getElementById('playerGameplayCard').classList.remove('hidden');
@@ -1486,7 +1548,7 @@
         timeTaken: timeTaken
       };
 
-      dispatchSyncPayload('RESPONSE_SUBMITTED', resp);
+      sendSyncEvent('RESPONSE_SUBMITTED', resp);
 
       document.getElementById('playerQuestionScreen').classList.add('hidden');
       document.getElementById('playerLockedScreen').classList.remove('hidden');
