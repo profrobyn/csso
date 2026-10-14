@@ -12,8 +12,6 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- PeerJS for WebRTC Standard Port 443 Cross-Network Sync -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -116,7 +114,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-bolt mr-1"></i> Dual Sync Active
+            <i class="fa-solid fa-bolt mr-1"></i> Firewall-Proof Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -750,13 +748,9 @@
     let stageTimeRemaining = 0;
     let localPlayer = null;
 
-    // Dual-Engine Synchronizer Variables
-    const BROADCAST_NAME = 'csso_trivia_sync_2026';
-    const PEER_HOST_ID = 'csso_trivia_host_2026';
+    // Dual Sync Controllers
+    const BROADCAST_CHANNEL_NAME = 'csso_trivia_local_sync_channel';
     let broadcastChannel = null;
-    let peerInstance = null;
-    let peerHostConnList = [];
-    let peerPlayerConn = null;
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -764,99 +758,80 @@
       renderQuestionsList();
       updateQrCode();
 
-      // Determine view
+      // Initialize Native Local Direct Sync
+      initLocalSyncEngine();
+
+      // Check URL parameters for direct player access
       const urlParams = new URLSearchParams(window.location.search);
-      const isPlayerJoin = urlParams.get('join') === 'true';
-
-      initDualSyncEngine(!isPlayerJoin);
-
-      if (isPlayerJoin) {
+      if (urlParams.get('join') === 'true') {
         switchMainTab('player');
       }
     });
 
-    // ==================== HYBRID DUAL-SYNC ENGINE ====================
-    function initDualSyncEngine(isHost) {
-      // 1. Local BroadcastChannel
+    // ==================== LOCAL DIRECT SYNC ENGINE ====================
+    function initLocalSyncEngine() {
+      // 1. BroadcastChannel Engine
       if (typeof BroadcastChannel !== 'undefined') {
-        broadcastChannel = new BroadcastChannel(BROADCAST_NAME);
-        broadcastChannel.onmessage = (e) => handleSyncEvent(e.data);
+        try {
+          broadcastChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+          broadcastChannel.onmessage = (e) => {
+            if (e && e.data) handleSyncPayload(e.data);
+          };
+        } catch(e) {
+          console.warn("BroadcastChannel error:", e);
+        }
       }
 
-      // 2. Storage Event Listener (Fallback for dual windows)
+      // 2. Storage Event Listener (Ensures sync between windows/tabs even on locked networks)
       window.addEventListener('storage', (e) => {
-        if (e.key === 'csso_event_payload' && e.newValue) {
+        if (e.key === 'csso_sync_bus' && e.newValue) {
           try {
-            handleSyncEvent(JSON.parse(e.newValue));
+            const payload = JSON.parse(e.newValue);
+            handleSyncPayload(payload);
           } catch(err){}
         }
       });
+    }
 
-      // 3. PeerJS Cloud WebRTC over Standard Port 443
+    function dispatchSyncPayload(type, data) {
+      const payloadObj = { type, data, _ts: Date.now() + Math.random() };
+
+      // Dispatch via BroadcastChannel
+      if (broadcastChannel) {
+        try {
+          broadcastChannel.postMessage(payloadObj);
+        } catch(e){}
+      }
+
+      // Dispatch via LocalStorage Event Bus
       try {
-        if (typeof Peer !== 'undefined') {
-          if (isHost) {
-            peerInstance = new Peer(PEER_HOST_ID);
-            peerInstance.on('connection', (conn) => {
-              peerHostConnList.push(conn);
-              conn.on('data', (data) => handleSyncEvent(data));
+        localStorage.setItem('csso_sync_bus', JSON.stringify(payloadObj));
+      } catch(e){}
+    }
+
+    function handleSyncPayload(payload) {
+      if (!payload || !payload.type) return;
+
+      const { type, data } = payload;
+
+      if (type === 'PLAYER_REGISTERED') {
+        if (data && data.id && data.name) {
+          if (!registeredPlayers.some(p => p.id === data.id)) {
+            registeredPlayers.push({
+              id: data.id,
+              name: data.name,
+              score: 0,
+              totalTime: 0,
+              wonIndividual: false
             });
-          } else {
-            peerInstance = new Peer();
-            peerInstance.on('open', () => {
-              peerPlayerConn = peerInstance.connect(PEER_HOST_ID);
-              peerPlayerConn.on('data', (data) => handleSyncEvent(data));
-            });
+            updateLobbyPlayerCounts();
           }
         }
-      } catch(e) {
-        console.warn("PeerJS init error:", e);
-      }
-    }
-
-    function sendSyncEvent(type, payload) {
-      const eventObj = { type, payload, timestamp: Date.now() };
-
-      // Dispatch 1: BroadcastChannel
-      if (broadcastChannel) {
-        broadcastChannel.postMessage(eventObj);
-      }
-
-      // Dispatch 2: Storage Event
-      try {
-        localStorage.setItem('csso_event_payload', JSON.stringify(eventObj));
-      } catch(e){}
-
-      // Dispatch 3: PeerJS Relays
-      if (peerHostConnList.length > 0) {
-        peerHostConnList.forEach(c => {
-          if (c && c.open) c.send(eventObj);
-        });
-      }
-      if (peerPlayerConn && peerPlayerConn.open) {
-        peerPlayerConn.send(eventObj);
-      }
-    }
-
-    function handleSyncEvent(eventObj) {
-      if (!eventObj || !eventObj.type) return;
-
-      const { type, payload } = eventObj;
-
-      if (type === 'PLAYER_JOINED') {
-        if (!registeredPlayers.some(p => p.id === payload.id)) {
-          registeredPlayers.push(payload);
-          updateLobbyPlayerCounts();
-
-          // If Host, acknowledge state back to joining player
-          sendSyncEvent('HOST_STATE_SYNC', {
-            playersCount: registeredPlayers.length,
-            qIndex: currentQIndex
-          });
-        }
       } else if (type === 'RESPONSE_SUBMITTED') {
-        if (!currentResponses.some(r => r.playerId === payload.playerId)) {
-          currentResponses.push(payload);
+        if (data && data.playerId && data.choiceIndex !== undefined) {
+          if (!currentResponses.some(r => r.playerId === data.playerId)) {
+            currentResponses.push(data);
+          }
         }
       } else if (type === 'GAME_RESET') {
         registeredPlayers = [];
@@ -876,12 +851,12 @@
           document.getElementById('playerLockedScreen').classList.add('hidden');
           document.getElementById('playerQuestionScreen').classList.remove('hidden');
 
-          document.getElementById('playerQNum').textContent = `Question ${payload.qIndex + 1}`;
-          document.getElementById('playerQPrompt').textContent = payload.text;
-          document.getElementById('playerTimer').textContent = `${payload.timeLimit}s`;
+          document.getElementById('playerQNum').textContent = `Question ${data.qIndex + 1}`;
+          document.getElementById('playerQPrompt').textContent = data.text;
+          document.getElementById('playerTimer').textContent = `${data.timeLimit}s`;
 
           const grid = document.getElementById('playerButtonsGrid');
-          grid.innerHTML = payload.options.map((opt, idx) => `
+          grid.innerHTML = data.options.map((opt, idx) => `
             <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3">
               <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
               <span>${escapeHtml(opt)}</span>
@@ -1203,7 +1178,7 @@
       roundWinnersLog = [];
       currentQIndex = 0;
 
-      sendSyncEvent('GAME_RESET', {});
+      dispatchSyncPayload('GAME_RESET', {});
 
       updateLobbyPlayerCounts();
       renderWinnersLog();
@@ -1218,7 +1193,7 @@
         roundWinnersLog = [];
         currentQIndex = 0;
 
-        sendSyncEvent('GAME_RESET', {});
+        dispatchSyncPayload('GAME_RESET', {});
 
         updateLobbyPlayerCounts();
         renderWinnersLog();
@@ -1289,7 +1264,7 @@
 
       showStageScreen('question');
 
-      sendSyncEvent('QUESTION_START', {
+      dispatchSyncPayload('QUESTION_START', {
         qIndex: qIndex,
         text: q.text,
         options: q.options,
@@ -1340,7 +1315,7 @@
       document.getElementById('barCorrect').style.width = `${correctPct}%`;
       document.getElementById('barIncorrect').style.width = `${100 - correctPct}%`;
 
-      sendSyncEvent('TIME_EXPIRED', { correctIndex: q.correctIndex });
+      dispatchSyncPayload('TIME_EXPIRED', { correctIndex: q.correctIndex });
 
       setTimeout(() => {
         spinPrizeRandomizer();
@@ -1491,7 +1466,7 @@
         wonIndividual: false
       };
 
-      sendSyncEvent('PLAYER_JOINED', localPlayer);
+      dispatchSyncPayload('PLAYER_REGISTERED', localPlayer);
 
       document.getElementById('playerRegisterCard').classList.add('hidden');
       document.getElementById('playerGameplayCard').classList.remove('hidden');
@@ -1511,7 +1486,7 @@
         timeTaken: timeTaken
       };
 
-      sendSyncEvent('RESPONSE_SUBMITTED', resp);
+      dispatchSyncPayload('RESPONSE_SUBMITTED', resp);
 
       document.getElementById('playerQuestionScreen').classList.add('hidden');
       document.getElementById('playerLockedScreen').classList.remove('hidden');
