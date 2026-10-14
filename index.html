@@ -12,8 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- MQTT.js for Realtime WebSockets -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+  <!-- PeerJS (WebRTC over Port 443) -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -115,8 +115,8 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-plug-circle-check mr-1"></i> WebSocket Connected
+          <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-amber-900/60 text-amber-300 border border-amber-700">
+            <i class="fa-solid fa-spinner animate-spin mr-1"></i> Initializing Peer Server...
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -448,7 +448,7 @@
           </div>
           <div class="text-right">
             <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-amber-400 font-bold">Connecting WebSocket...</p>
+            <p id="playerStatusTag" class="text-[10px] text-amber-400 font-bold">Connecting Peer...</p>
           </div>
         </div>
 
@@ -509,7 +509,7 @@
           <i class="fa-solid fa-bug"></i> 🐞 Live Network Debug Console
           <span id="debugBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">Ready</span>
         </button>
-        <span id="roomTagDisplay" class="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">Topic: csso/trivia/2026</span>
+        <span id="roomTagDisplay" class="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">Topic: csso_host_2026</span>
       </div>
 
       <div class="flex items-center space-x-2">
@@ -783,16 +783,16 @@
       }
     ];
 
-    // ==================== UNIFIED TOPIC DEFINITION ====================
-    function getCleanTopic() {
+    // ==================== UNIFIED HOST PEER ID ====================
+    function getHostPeerId() {
       const urlParams = new URLSearchParams(window.location.search);
       let rawRoom = urlParams.get('room') || '2026';
       let cleanRoom = rawRoom.toLowerCase().replace(/csso/g, '').replace(/trivia/g, '').replace(/[^a-z0-9]/g, '');
       if (!cleanRoom) cleanRoom = '2026';
-      return `csso/trivia/${cleanRoom}`;
+      return `csso_host_${cleanRoom}`;
     }
 
-    const CURRENT_MQTT_TOPIC = getCleanTopic();
+    const HOST_PEER_ID = getHostPeerId();
 
     // ==================== GLOBAL STATE ====================
     let questions = [];
@@ -812,13 +812,18 @@
     let isHost = true;
     let broadcastChannel = null;
     let processedEventKeys = new Set();
-    let mqttClient = null;
+    
+    // PeerJS Networking Engine
+    let myPeer = null;
+    let hostConnection = null; // Used by Player to talk to Host
+    let playerConnections = {}; // Used by Host to store active player connections { peerId: DataConnection }
+    let outboundQueue = []; // Persistent Outbox Buffer
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
 
-      document.getElementById('roomTagDisplay').textContent = `Topic: ${CURRENT_MQTT_TOPIC}`;
+      document.getElementById('roomTagDisplay').textContent = `Target: ${HOST_PEER_ID}`;
 
       if (urlParams.get('join') === 'true') {
         isHost = false;
@@ -834,15 +839,14 @@
 
       initSyncEngine();
 
-      // Handshake Retry Loop for Smartphone
+      // Handshake Retry Loop for Smartphone Outbox
       setInterval(() => {
         if (!isHost && localPlayer && !registrationAckReceived) {
-          debugLog(`Retrying PLAYER_JOINED handshake...`, 'warn');
           sendSyncEvent('PLAYER_JOINED', localPlayer);
         }
       }, 2500);
 
-      // Throttled Host Heartbeat (Every 5s)
+      // Throttled Host Heartbeat (Every 4s)
       setInterval(() => {
         if (isHost) {
           sendSyncEvent('HOST_HEARTBEAT', {
@@ -851,17 +855,14 @@
             qIndex: currentQIndex
           });
         }
-      }, 5000);
+      }, 4000);
 
       // Mobile Tab Focus & Wake Recovery
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-          debugLog(`Device resumed. Re-verifying WebSocket connection...`, 'info');
-          if (!mqttClient || !mqttClient.connected) {
-            connectWebSocketBroker();
-          }
-          if (!isHost && localPlayer && !registrationAckReceived) {
-            sendSyncEvent('PLAYER_JOINED', localPlayer);
+          debugLog(`Device resumed. Refreshing peer data channels...`, 'info');
+          if (!isHost && (!hostConnection || !hostConnection.open)) {
+            connectPlayerToHost();
           }
         }
       });
@@ -917,15 +918,15 @@
     }
 
     function sendTestPing() {
-      sendSyncEvent('PING_TEST', { message: 'Hello over WebSocket!' });
-      debugLog(`Sent test PING to WebSocket topic [${CURRENT_MQTT_TOPIC}]`, 'info');
+      sendSyncEvent('PING_TEST', { message: 'Hello from device!' });
+      debugLog(`Sent test PING to target [${HOST_PEER_ID}]`, 'info');
     }
 
-    // ==================== REALTIME WEBSOCKET SYNC ENGINE ====================
+    // ==================== PEERJS REALTIME ENGINE ====================
     function initSyncEngine() {
       if (typeof BroadcastChannel !== 'undefined') {
         try {
-          broadcastChannel = new BroadcastChannel(`csso_chan_${CURRENT_MQTT_TOPIC.replace(/\//g, '_')}`);
+          broadcastChannel = new BroadcastChannel(`csso_chan_${HOST_PEER_ID}`);
           broadcastChannel.onmessage = (e) => {
             if (e && e.data) processReceivedPayload(e.data);
           };
@@ -933,95 +934,200 @@
       }
 
       window.addEventListener('storage', (e) => {
-        if (e.key === `csso_bus_${CURRENT_MQTT_TOPIC.replace(/\//g, '_')}` && e.newValue) {
+        if (e.key === `csso_bus_${HOST_PEER_ID}` && e.newValue) {
           try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
         }
       });
 
-      connectWebSocketBroker();
-    }
-
-    function connectWebSocketBroker() {
-      const brokerUrl = 'wss://broker.hivemq.com:8884/mqtt';
-      debugLog(`Connecting Realtime WebSocket: ${brokerUrl}`, 'info');
-
-      try {
-        mqttClient = mqtt.connect(brokerUrl, {
-          clientId: `${myDeviceId}_${Math.random().toString(36).substring(2, 6)}`,
-          keepalive: 30,
-          reconnectPeriod: 2000,
-          connectTimeout: 5000
-        });
-
-        mqttClient.on('connect', () => {
-          debugLog(`⚡ Realtime WebSocket Connected to HiveMQ Broker!`, 'success');
-          
-          const badge = document.getElementById('syncStatusBadge');
-          if (badge) {
-            badge.innerHTML = `<i class="fa-solid fa-bolt mr-1"></i> WebSocket Active`;
-            badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700";
-          }
-
-          mqttClient.subscribe(CURRENT_MQTT_TOPIC, { qos: 0 }, (err) => {
-            if (!err) {
-              debugLog(`Subscribed to topic: ${CURRENT_MQTT_TOPIC}`, 'info');
-              if (!isHost) {
-                sendSyncEvent('PHONE_CONNECTED', { deviceId: myDeviceId });
-              }
-            }
-          });
-        });
-
-        mqttClient.on('message', (topic, payload) => {
-          try {
-            const str = payload.toString();
-            const eventObj = JSON.parse(str);
-            processReceivedPayload(eventObj);
-          } catch(err){}
-        });
-
-        mqttClient.on('error', (err) => {
-          debugLog(`WebSocket Notice: ${err.message || 'Connection error'}`, 'warn');
-        });
-
-        mqttClient.on('reconnect', () => {
-          debugLog(`WebSocket Reconnecting...`, 'warn');
-        });
-
-      } catch(e) {
-        debugLog(`WebSocket Initialization Error: ${e.message}`, 'error');
+      if (isHost) {
+        initHostPeer();
+      } else {
+        initPlayerPeer();
       }
     }
 
-    async function sendSyncEvent(type, payload) {
+    // --- HOST PEER SETUP ---
+    function initHostPeer() {
+      debugLog(`Initializing Stage Host Peer ID: [${HOST_PEER_ID}]...`, 'info');
+
+      myPeer = new Peer(HOST_PEER_ID, {
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      myPeer.on('open', (id) => {
+        debugLog(`⚡ Stage Host Active! Peer ID: ${id}`, 'success');
+        updateBadge("Host Peer Active", "emerald");
+      });
+
+      myPeer.on('connection', (conn) => {
+        debugLog(`Incoming connection from Phone Peer: ${conn.peer}`, 'info');
+        
+        conn.on('open', () => {
+          playerConnections[conn.peer] = conn;
+          connectedDevices.add(conn.peer);
+          updateLobbyPlayerCounts();
+          debugLog(`⚡ Phone WebRTC Channel Opened: ${conn.peer}`, 'success');
+        });
+
+        conn.on('data', (data) => {
+          processReceivedPayload(data);
+        });
+
+        conn.on('close', () => {
+          delete playerConnections[conn.peer];
+          connectedDevices.delete(conn.peer);
+          updateLobbyPlayerCounts();
+          debugLog(`Phone Peer Disconnected: ${conn.peer}`, 'warn');
+        });
+      });
+
+      myPeer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          debugLog(`Peer ID ${HOST_PEER_ID} already claimed. Re-binding...`, 'warn');
+        } else {
+          debugLog(`PeerJS Error: ${err.type || err}`, 'error');
+        }
+      });
+    }
+
+    // --- PLAYER PEER SETUP ---
+    function initPlayerPeer() {
+      debugLog(`Initializing Phone Player Peer...`, 'info');
+
+      myPeer = new Peer({
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      myPeer.on('open', (id) => {
+        debugLog(`Phone Peer Ready: ${id}. Connecting to Stage Host [${HOST_PEER_ID}]...`, 'info');
+        connectPlayerToHost();
+      });
+
+      myPeer.on('error', (err) => {
+        debugLog(`Player PeerJS Error: ${err.type || err}`, 'error');
+      });
+    }
+
+    function connectPlayerToHost() {
+      if (!myPeer || myPeer.destroyed) return;
+
+      updateBadge("Connecting to Host...", "amber");
+      hostConnection = myPeer.connect(HOST_PEER_ID, { reliable: true });
+
+      hostConnection.on('open', () => {
+        debugLog(`⚡ Direct WebRTC Connection Established with Stage Host!`, 'success');
+        updateBadge("Connected to Host", "emerald");
+
+        const statusTag = document.getElementById('playerStatusTag');
+        if (statusTag) {
+          statusTag.textContent = "WebRTC Active";
+          statusTag.className = "text-[10px] text-emerald-400 font-bold";
+        }
+
+        sendSyncEvent('PHONE_CONNECTED', { deviceId: myDeviceId });
+        if (localPlayer) {
+          sendSyncEvent('PLAYER_JOINED', localPlayer);
+        }
+
+        flushOutboundQueue();
+      });
+
+      hostConnection.on('data', (data) => {
+        processReceivedPayload(data);
+      });
+
+      hostConnection.on('close', () => {
+        debugLog(`Connection to Host closed. Reconnecting in 2s...`, 'warn');
+        updateBadge("Reconnecting...", "amber");
+        setTimeout(connectPlayerToHost, 2000);
+      });
+
+      hostConnection.on('error', (err) => {
+        debugLog(`Host Connection Error: ${err}`, 'error');
+      });
+    }
+
+    function updateBadge(text, color) {
+      const badge = document.getElementById('syncStatusBadge');
+      if (!badge) return;
+
+      if (color === 'emerald') {
+        badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700";
+        badge.innerHTML = `<i class="fa-solid fa-bolt mr-1"></i> ${text}`;
+      } else {
+        badge.className = "text-xs px-2.5 py-1 rounded-full bg-amber-900/60 text-amber-300 border border-amber-700";
+        badge.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-1"></i> ${text}`;
+      }
+    }
+
+    // --- RELIABLE EVENT TRANSMISSION ENGINE ---
+    function sendSyncEvent(type, payload) {
       const eventObj = {
         type: type,
         payload: payload,
         senderId: myDeviceId,
-        topic: CURRENT_MQTT_TOPIC,
+        topic: HOST_PEER_ID,
         _ts: Date.now() + Math.random()
       };
-
-      const bodyStr = JSON.stringify(eventObj);
 
       if (type !== 'HOST_HEARTBEAT') {
         debugLog(`Sending -> ${type}`, 'info');
       }
 
-      // 1. Send via WebSocket
-      if (mqttClient && mqttClient.connected) {
-        try {
-          mqttClient.publish(CURRENT_MQTT_TOPIC, bodyStr, { qos: 0 });
-        } catch(e){}
+      outboundQueue.push(eventObj);
+      flushOutboundQueue();
+    }
+
+    function flushOutboundQueue() {
+      if (outboundQueue.length === 0) return;
+
+      const remainingQueue = [];
+
+      while (outboundQueue.length > 0) {
+        const eventObj = outboundQueue.shift();
+        let delivered = false;
+
+        // 1. Send via WebRTC PeerJS
+        if (isHost) {
+          Object.values(playerConnections).forEach(conn => {
+            if (conn && conn.open) {
+              try { conn.send(eventObj); delivered = true; } catch(e){}
+            }
+          });
+        } else {
+          if (hostConnection && hostConnection.open) {
+            try { hostConnection.send(eventObj); delivered = true; } catch(e){}
+          }
+        }
+
+        // 2. BroadcastChannel (Same Browser / Tab)
+        if (broadcastChannel) {
+          try { broadcastChannel.postMessage(eventObj); } catch(e){}
+        }
+
+        // 3. LocalStorage Bus
+        try { localStorage.setItem(`csso_bus_${HOST_PEER_ID}`, JSON.stringify(eventObj)); } catch(e){}
+
+        // If data connection isn't open yet, hold message in queue
+        const canSend = isHost ? (Object.keys(playerConnections).length > 0) : (hostConnection && hostConnection.open);
+        if (!delivered && !canSend) {
+          remainingQueue.push(eventObj);
+        }
       }
 
-      // 2. Local BroadcastChannel
-      if (broadcastChannel) {
-        try { broadcastChannel.postMessage(eventObj); } catch(e){}
-      }
-
-      // 3. LocalStorage Bus
-      try { localStorage.setItem(`csso_bus_${CURRENT_MQTT_TOPIC.replace(/\//g, '_')}`, bodyStr); } catch(e){}
+      outboundQueue = remainingQueue;
     }
 
     function processReceivedPayload(eventObj) {
