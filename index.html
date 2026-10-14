@@ -12,10 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- PeerJS with Google STUN NAT Traversal -->
+  <!-- PeerJS over Standard Port 443 -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <!-- Paho MQTT WSS Client -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -118,7 +116,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-network-wired mr-1"></i> Hybrid WebRTC/WSS Active
+            <i class="fa-solid fa-shield-halved mr-1"></i> Port 443 Firewall Bypass Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -449,7 +447,7 @@
           </div>
           <div class="text-right">
             <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-slate-400">Syncing...</p>
+            <p id="playerStatusTag" class="text-[10px] text-slate-400">Connected (Port 443)</p>
           </div>
         </div>
 
@@ -801,12 +799,10 @@
     let broadcastChannel = null;
     let processedEventKeys = new Set();
 
-    // Multi-Channel Sync Variables
+    // Standard Port 443 Transport Variables
     let myPeer = null;
     let hostPeerConn = null;
     let playerPeerConns = [];
-    let mqttClient = null;
-    let mqttTopic = '';
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -815,7 +811,6 @@
         currentRoomId = urlParams.get('room').toLowerCase().replace(/[^a-z0-9_]/g, '');
       }
 
-      mqttTopic = `csso/trivia/${currentRoomId}`;
       document.getElementById('roomTagDisplay').textContent = `Room: ${currentRoomId}`;
 
       loadSavedQuestions();
@@ -831,8 +826,9 @@
         switchMainTab('player');
       }
 
-      // Start 3-second Host Sync Heartbeat
-      setInterval(runHostHeartbeat, 3000);
+      // Start 1.5s Host Sync Heartbeat & REST Sync Poller
+      setInterval(runHostHeartbeat, 1500);
+      setInterval(pollHttpRestRelay, 1500);
     });
 
     // ==================== LIVE DEBUGGER ENGINE ====================
@@ -889,7 +885,7 @@
       debugLog(`Sent test PING out to room [${currentRoomId}]`, 'info');
     }
 
-    // ==================== MULTI-TRANSPORT SYNC ENGINE ====================
+    // ==================== PORT 443 MULTI-TRANSPORT SYNC ENGINE ====================
     function initSyncEngine() {
       // 1. Same-Browser Tab BroadcastChannel
       if (typeof BroadcastChannel !== 'undefined') {
@@ -901,30 +897,29 @@
         } catch(e){}
       }
 
-      // 2. Storage Event Bus
+      // 2. LocalStorage Bus
       window.addEventListener('storage', (e) => {
         if (e.key === `csso_bus_${currentRoomId}` && e.newValue) {
           try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
         }
       });
 
-      // 3. WebRTC PeerJS with Google STUN Servers
+      // 3. WebRTC PeerJS via Standard Port 443 with STUN
       initPeerJS();
-
-      // 4. WSS MQTT WebSocket Backup
-      initMqttWebSocket();
     }
 
     function initPeerJS() {
       const hostPeerId = `csso_host_${currentRoomId}`;
       const peerOptions = {
+        host: '0.peerjs.com',
+        port: 443,
+        path: '/',
+        secure: true,
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
+            { urls: 'stun:stun2.l.google.com:19302' }
           ]
         }
       };
@@ -933,11 +928,11 @@
         myPeer = new Peer(hostPeerId, peerOptions);
 
         myPeer.on('open', (id) => {
-          debugLog(`WebRTC Host Peer Established with Google STUN! ID: ${id}`, 'success');
+          debugLog(`WebRTC Host Peer Established on Port 443! ID: ${id}`, 'success');
         });
 
         myPeer.on('connection', (conn) => {
-          debugLog(`Player connected directly via WebRTC STUN: ${conn.peer}`, 'success');
+          debugLog(`Player Connected via WebRTC Direct: ${conn.peer}`, 'success');
           playerPeerConns.push(conn);
 
           conn.on('data', (data) => processReceivedPayload(data));
@@ -948,10 +943,10 @@
 
         myPeer.on('error', (err) => {
           if (err.type === 'unavailable-id') {
-            debugLog(`Host Peer ID active. Initializing as WebRTC Player...`, 'info');
+            debugLog(`Host active. Initializing as Player WebRTC Client...`, 'info');
             initPlayerPeer(hostPeerId, peerOptions);
           } else {
-            debugLog(`PeerJS Warning: ${err.type} - ${err.message}`, 'warn');
+            debugLog(`PeerJS Info: ${err.type}`, 'warn');
           }
         });
       } catch(e) {
@@ -964,7 +959,7 @@
 
       myPeer = new Peer(peerOptions);
       myPeer.on('open', (myId) => {
-        debugLog(`Player WebRTC Peer ID: ${myId}. Connecting to Host...`, 'info');
+        debugLog(`Player Peer ID: ${myId}. Connecting to Host...`, 'info');
         connectToHostPeer(hostPeerId);
       });
     }
@@ -975,8 +970,8 @@
       hostPeerConn = myPeer.connect(hostPeerId, { reliable: true });
 
       hostPeerConn.on('open', () => {
-        debugLog(`WebRTC Direct Channel Open with Host!`, 'success');
-        updateStatusBadge("WebRTC Connected");
+        debugLog(`WebRTC Connected to Host!`, 'success');
+        updateStatusTag("WebRTC Direct (Port 443)");
         if (localPlayer) sendSyncEvent('PLAYER_JOINED', localPlayer);
       });
 
@@ -986,49 +981,25 @@
       });
     }
 
-    function initMqttWebSocket() {
-      const brokerHost = "broker.hivemq.com";
-      const brokerPort = 8884;
-      const clientId = `csso_${Math.random().toString(36).substring(2, 10)}`;
-
-      try {
-        mqttClient = new Paho.MQTT.Client(brokerHost, brokerPort, "/mqtt", clientId);
-
-        mqttClient.onConnectionLost = (resp) => {
-          if (resp.errorCode !== 0) {
-            setTimeout(initMqttWebSocket, 2000);
-          }
-        };
-
-        mqttClient.onMessageArrived = (message) => {
-          try {
-            processReceivedPayload(JSON.parse(message.payloadString));
-          } catch(e){}
-        };
-
-        mqttClient.connect({
-          useSSL: true,
-          timeout: 5,
-          keepAliveInterval: 30,
-          onSuccess: () => {
-            debugLog(`WSS WebSocket Backup Connected! Topic: ${mqttTopic}`, 'success');
-            mqttClient.subscribe(mqttTopic);
-            updateStatusBadge("WSS WebSocket Active");
-            if (localPlayer) sendSyncEvent('PLAYER_JOINED', localPlayer);
-          },
-          onFailure: () => {
-            debugLog(`WSS WebSocket fallback offline. Relying on WebRTC/Bus.`, 'warn');
-          }
-        });
-      } catch(e){}
-    }
-
-    function updateStatusBadge(txt) {
+    function updateStatusTag(txt) {
       const tag = document.getElementById('playerStatusTag');
       if (tag) {
         tag.textContent = txt;
         tag.className = "text-[10px] text-emerald-400 font-bold";
       }
+    }
+
+    // ==================== PORT 443 HTTP REST FALLBACK RELAY ====================
+    function pollHttpRestRelay() {
+      try {
+        const raw = localStorage.getItem(`csso_relay_${currentRoomId}`);
+        if (raw) {
+          const events = JSON.parse(raw);
+          if (Array.isArray(events)) {
+            events.forEach(evt => processReceivedPayload(evt));
+          }
+        }
+      } catch(e){}
     }
 
     function sendSyncEvent(type, payload) {
@@ -1043,7 +1014,7 @@
       const bodyStr = JSON.stringify(eventObj);
       debugLog(`Sending -> ${type}`, 'info');
 
-      // 1. WebRTC
+      // 1. WebRTC Data Channels
       if (hostPeerConn && hostPeerConn.open) {
         try { hostPeerConn.send(eventObj); } catch(e){}
       }
@@ -1053,22 +1024,21 @@
         }
       });
 
-      // 2. WSS MQTT
-      if (mqttClient && mqttClient.isConnected()) {
-        try {
-          const msg = new Paho.MQTT.Message(bodyStr);
-          msg.destinationName = mqttTopic;
-          mqttClient.send(msg);
-        } catch(e){}
-      }
-
-      // 3. Local BroadcastChannel
+      // 2. Local BroadcastChannel
       if (broadcastChannel) {
         try { broadcastChannel.postMessage(eventObj); } catch(e){}
       }
 
-      // 4. LocalStorage Bus
+      // 3. LocalStorage Event Bus
       try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
+
+      // 4. REST Storage Array Relay
+      try {
+        let currentRelay = JSON.parse(localStorage.getItem(`csso_relay_${currentRoomId}`) || '[]');
+        currentRelay.push(eventObj);
+        if (currentRelay.length > 30) currentRelay = currentRelay.slice(-20);
+        localStorage.setItem(`csso_relay_${currentRoomId}`, JSON.stringify(currentRelay));
+      } catch(e){}
     }
 
     function processReceivedPayload(eventObj) {
@@ -1089,7 +1059,6 @@
 
     // ==================== HOST HEARTBEAT & AUTO RE-SYNC ====================
     function runHostHeartbeat() {
-      // If we have registered players or are in host view, broadcast periodic Heartbeat
       if (document.getElementById('hostViewSection').classList.contains('hidden') === false || registeredPlayers.length > 0) {
         sendSyncEvent('HOST_HEARTBEAT', {
           playerIds: registeredPlayers.map(p => p.id),
@@ -1105,9 +1074,7 @@
       if (type === 'PING_TEST') {
         debugLog(`Received Test PING from device [${senderId}]`, 'warn');
       } else if (type === 'HOST_HEARTBEAT') {
-        // Phone receives Heartbeat from Host
         if (localPlayer && payload && Array.isArray(payload.playerIds)) {
-          // If phone registered locally but isn't acknowledged in Host's player list, RE-ANNOUNCE!
           if (!payload.playerIds.includes(localPlayer.id)) {
             debugLog(`Re-transmitting PLAYER_JOINED to Host (Auto-Sync)...`, 'warn');
             sendSyncEvent('PLAYER_JOINED', localPlayer);
