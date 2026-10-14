@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- PeerJS over Standard Port 443 -->
+  <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
@@ -116,7 +116,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-shield-halved mr-1"></i> Port 443 Firewall Bypass Active
+            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Port 443 HTTPS REST Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -447,7 +447,7 @@
           </div>
           <div class="text-right">
             <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-slate-400">Connected (Port 443)</p>
+            <p id="playerStatusTag" class="text-[10px] text-slate-400">Connected (HTTPS 443)</p>
           </div>
         </div>
 
@@ -796,6 +796,7 @@
 
     const myDeviceId = `dev_${Math.random().toString(36).substring(2, 8)}`;
     let currentRoomId = 'csso_trivia_2026';
+    let isHost = true; // Default to Host unless ?join=true
     let broadcastChannel = null;
     let processedEventKeys = new Set();
 
@@ -803,6 +804,9 @@
     let myPeer = null;
     let hostPeerConn = null;
     let playerPeerConns = [];
+
+    // Public Firebase Realtime Database REST URL (Standard Port 443)
+    const REST_FIREBASE_URL = `https://csso-trivia-2026-default-rtdb.firebaseio.com/rooms`;
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -813,22 +817,22 @@
 
       document.getElementById('roomTagDisplay').textContent = `Room: ${currentRoomId}`;
 
+      if (urlParams.get('join') === 'true') {
+        isHost = false;
+        switchMainTab('player');
+      }
+
       loadSavedQuestions();
       renderQuestionsList();
       updateQrCode();
 
       initDebugConsole();
-      debugLog(`Page Loaded. Device ID: ${myDeviceId}`, 'info');
+      debugLog(`Page Loaded. Device ID: ${myDeviceId} | Mode: ${isHost ? 'HOST' : 'PLAYER'}`, 'info');
 
       initSyncEngine();
 
-      if (urlParams.get('join') === 'true') {
-        switchMainTab('player');
-      }
-
-      // Start 1.5s Host Sync Heartbeat & REST Sync Poller
-      setInterval(runHostHeartbeat, 1500);
-      setInterval(pollHttpRestRelay, 1500);
+      // Start 1.5s Sync Loop
+      setInterval(syncLoop, 1500);
     });
 
     // ==================== LIVE DEBUGGER ENGINE ====================
@@ -904,7 +908,7 @@
         }
       });
 
-      // 3. WebRTC PeerJS via Standard Port 443 with STUN
+      // 3. WebRTC PeerJS via Standard Port 443
       initPeerJS();
     }
 
@@ -918,37 +922,31 @@
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' }
           ]
         }
       };
 
       try {
-        myPeer = new Peer(hostPeerId, peerOptions);
-
-        myPeer.on('open', (id) => {
-          debugLog(`WebRTC Host Peer Established on Port 443! ID: ${id}`, 'success');
-        });
-
-        myPeer.on('connection', (conn) => {
-          debugLog(`Player Connected via WebRTC Direct: ${conn.peer}`, 'success');
-          playerPeerConns.push(conn);
-
-          conn.on('data', (data) => processReceivedPayload(data));
-          conn.on('close', () => {
-            playerPeerConns = playerPeerConns.filter(c => c !== conn);
+        if (isHost) {
+          myPeer = new Peer(hostPeerId, peerOptions);
+          myPeer.on('open', (id) => {
+            debugLog(`WebRTC Host Peer Established on Port 443! ID: ${id}`, 'success');
           });
-        });
 
-        myPeer.on('error', (err) => {
-          if (err.type === 'unavailable-id') {
-            debugLog(`Host active. Initializing as Player WebRTC Client...`, 'info');
-            initPlayerPeer(hostPeerId, peerOptions);
-          } else {
-            debugLog(`PeerJS Info: ${err.type}`, 'warn');
-          }
-        });
+          myPeer.on('connection', (conn) => {
+            debugLog(`Player Connected via WebRTC Direct: ${conn.peer}`, 'success');
+            playerPeerConns.push(conn);
+            conn.on('data', (data) => processReceivedPayload(data));
+            conn.on('close', () => { playerPeerConns = playerPeerConns.filter(c => c !== conn); });
+          });
+
+          myPeer.on('error', (err) => {
+            debugLog(`Host PeerJS Info: ${err.type}`, 'warn');
+          });
+        } else {
+          initPlayerPeer(hostPeerId, peerOptions);
+        }
       } catch(e) {
         debugLog(`PeerJS Exception: ${e.message}`, 'error');
       }
@@ -970,14 +968,14 @@
       hostPeerConn = myPeer.connect(hostPeerId, { reliable: true });
 
       hostPeerConn.on('open', () => {
-        debugLog(`WebRTC Connected to Host!`, 'success');
+        debugLog(`WebRTC Direct Channel Open with Host!`, 'success');
         updateStatusTag("WebRTC Direct (Port 443)");
         if (localPlayer) sendSyncEvent('PLAYER_JOINED', localPlayer);
       });
 
       hostPeerConn.on('data', (data) => processReceivedPayload(data));
       hostPeerConn.on('close', () => {
-        setTimeout(() => connectToHostPeer(hostPeerId), 2000);
+        setTimeout(() => connectToHostPeer(hostPeerId), 3000);
       });
     }
 
@@ -989,20 +987,30 @@
       }
     }
 
-    // ==================== PORT 443 HTTP REST FALLBACK RELAY ====================
-    function pollHttpRestRelay() {
+    // ==================== UNIVERSAL PORT 443 HTTPS REST RELAY ====================
+    async function syncLoop() {
+      // 1. Host Heartbeat Broadcast (ONLY IF THIS TAB IS HOST)
+      if (isHost) {
+        sendSyncEvent('HOST_HEARTBEAT', {
+          playerIds: registeredPlayers.map(p => p.id),
+          gameState: activeGameState,
+          qIndex: currentQIndex
+        });
+      }
+
+      // 2. Poll Public HTTPS Port 443 REST Relay
       try {
-        const raw = localStorage.getItem(`csso_relay_${currentRoomId}`);
-        if (raw) {
-          const events = JSON.parse(raw);
-          if (Array.isArray(events)) {
-            events.forEach(evt => processReceivedPayload(evt));
+        const resp = await fetch(`${REST_FIREBASE_URL}/${currentRoomId}/events.json?limitToLast=15`, { cache: 'no-store' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && typeof data === 'object') {
+            Object.values(data).forEach(evt => processReceivedPayload(evt));
           }
         }
       } catch(e){}
     }
 
-    function sendSyncEvent(type, payload) {
+    async function sendSyncEvent(type, payload) {
       const eventObj = {
         type: type,
         payload: payload,
@@ -1032,17 +1040,21 @@
       // 3. LocalStorage Event Bus
       try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
 
-      // 4. REST Storage Array Relay
+      // 4. Universal Port 443 HTTPS REST Publish
       try {
-        let currentRelay = JSON.parse(localStorage.getItem(`csso_relay_${currentRoomId}`) || '[]');
-        currentRelay.push(eventObj);
-        if (currentRelay.length > 30) currentRelay = currentRelay.slice(-20);
-        localStorage.setItem(`csso_relay_${currentRoomId}`, JSON.stringify(currentRelay));
+        fetch(`${REST_FIREBASE_URL}/${currentRoomId}/events.json`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyStr
+        }).catch(() => {});
       } catch(e){}
     }
 
     function processReceivedPayload(eventObj) {
       if (!eventObj || !eventObj.type || !eventObj._ts) return;
+
+      // CRITICAL FIX #1: DROP SELF-ECHO MESSAGES IMMEDIATELY!
+      if (eventObj.senderId === myDeviceId) return;
 
       const eventKey = `${eventObj.type}_${eventObj._ts}`;
       if (processedEventKeys.has(eventKey)) return;
@@ -1057,24 +1069,15 @@
       handleSyncEvent(eventObj);
     }
 
-    // ==================== HOST HEARTBEAT & AUTO RE-SYNC ====================
-    function runHostHeartbeat() {
-      if (document.getElementById('hostViewSection').classList.contains('hidden') === false || registeredPlayers.length > 0) {
-        sendSyncEvent('HOST_HEARTBEAT', {
-          playerIds: registeredPlayers.map(p => p.id),
-          gameState: activeGameState,
-          qIndex: currentQIndex
-        });
-      }
-    }
-
     function handleSyncEvent(eventObj) {
       const { type, payload, senderId } = eventObj;
 
       if (type === 'PING_TEST') {
         debugLog(`Received Test PING from device [${senderId}]`, 'warn');
       } else if (type === 'HOST_HEARTBEAT') {
-        if (localPlayer && payload && Array.isArray(payload.playerIds)) {
+        // Player smartphone receives Heartbeat from Host
+        if (!isHost && localPlayer && payload && Array.isArray(payload.playerIds)) {
+          // If phone is registered locally but host's player list missing this ID, RE-SYNC!
           if (!payload.playerIds.includes(localPlayer.id)) {
             debugLog(`Re-transmitting PLAYER_JOINED to Host (Auto-Sync)...`, 'warn');
             sendSyncEvent('PLAYER_JOINED', localPlayer);
@@ -1109,7 +1112,7 @@
         updateLobbyPlayerCounts();
         renderWinnersLog();
 
-        if (localPlayer) {
+        if (localPlayer && !isHost) {
           document.getElementById('playerGameplayCard').classList.add('hidden');
           document.getElementById('playerRegisterCard').classList.remove('hidden');
           localPlayer = null;
@@ -1117,7 +1120,7 @@
         debugLog(`Game Reset Event Received`, 'warn');
       } else if (type === 'QUESTION_START') {
         activeGameState = 'QUESTION';
-        if (localPlayer) {
+        if (!isHost && localPlayer) {
           document.getElementById('playerWaitingScreen').classList.add('hidden');
           document.getElementById('playerLockedScreen').classList.add('hidden');
           document.getElementById('playerWinCard').classList.add('hidden');
@@ -1141,7 +1144,7 @@
           `).join('');
         }
       } else if (type === 'TIME_EXPIRED') {
-        if (localPlayer) {
+        if (!isHost && localPlayer) {
           document.getElementById('playerQuestionScreen').classList.add('hidden');
           document.getElementById('playerLockedScreen').classList.add('hidden');
           document.getElementById('playerWinCard').classList.add('hidden');
@@ -1149,7 +1152,7 @@
         }
       } else if (type === 'WINNER_ANNOUNCED') {
         activeGameState = 'WINNER';
-        if (localPlayer && payload) {
+        if (!isHost && localPlayer && payload) {
           document.getElementById('playerQuestionScreen').classList.add('hidden');
           document.getElementById('playerLockedScreen').classList.add('hidden');
           document.getElementById('playerWaitingScreen').classList.add('hidden');
@@ -1825,12 +1828,14 @@
       const playerNav = document.getElementById('navPlayerBtn');
 
       if (tab === 'host') {
+        isHost = true;
         hostSec.classList.remove('hidden');
         playerSec.classList.add('hidden');
 
         hostNav.className = "px-3 py-1.5 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition";
         playerNav.className = "px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition";
       } else {
+        isHost = false;
         hostSec.classList.add('hidden');
         playerSec.classList.remove('hidden');
 
