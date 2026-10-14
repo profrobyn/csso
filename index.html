@@ -12,7 +12,9 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Paho MQTT WebSocket Client (Enterprise Firewall Bypass) -->
+  <!-- PeerJS with Google STUN NAT Traversal -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- Paho MQTT WSS Client -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
   <script>
@@ -116,7 +118,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-bolt mr-1"></i> WSS WebSocket Sync Active
+            <i class="fa-solid fa-network-wired mr-1"></i> Hybrid WebRTC/WSS Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -325,7 +327,7 @@
               Question Prompt Text...
             </h2>
 
-            <!-- Options Display Grid (Stage View for Projector) -->
+            <!-- Options Display Grid -->
             <div id="stageOptionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"></div>
 
             <p class="text-[11px] text-slate-400 italic text-center">Stage Control View (Display on Projector/Zoom) — Audience selects answers on smartphones.</p>
@@ -447,7 +449,7 @@
           </div>
           <div class="text-right">
             <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-slate-400">Connecting...</p>
+            <p id="playerStatusTag" class="text-[10px] text-slate-400">Syncing...</p>
           </div>
         </div>
 
@@ -799,11 +801,12 @@
     let broadcastChannel = null;
     let processedEventKeys = new Set();
 
-    // WSS MQTT Broker Engine Variables
+    // Multi-Channel Sync Variables
+    let myPeer = null;
+    let hostPeerConn = null;
+    let playerPeerConns = [];
     let mqttClient = null;
     let mqttTopic = '';
-    const PRIMARY_BROKER = { host: "broker.hivemq.com", port: 8884, path: "/mqtt" };
-    const SECONDARY_BROKER = { host: "broker.emqx.io", port: 8084, path: "/mqtt" };
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -827,6 +830,9 @@
       if (urlParams.get('join') === 'true') {
         switchMainTab('player');
       }
+
+      // Start 3-second Host Sync Heartbeat
+      setInterval(runHostHeartbeat, 3000);
     });
 
     // ==================== LIVE DEBUGGER ENGINE ====================
@@ -880,10 +886,10 @@
 
     function sendTestPing() {
       sendSyncEvent('PING_TEST', { message: 'Hello from device!' });
-      debugLog(`Sent test PING out to WSS topic [${mqttTopic}]`, 'info');
+      debugLog(`Sent test PING out to room [${currentRoomId}]`, 'info');
     }
 
-    // ==================== ENTERPRISE WSS WEBSOCKET SYNC ====================
+    // ==================== MULTI-TRANSPORT SYNC ENGINE ====================
     function initSyncEngine() {
       // 1. Same-Browser Tab BroadcastChannel
       if (typeof BroadcastChannel !== 'undefined') {
@@ -902,59 +908,127 @@
         }
       });
 
-      // 3. Connect WSS WebSockets over Port 443
-      connectMqttWebSocket(PRIMARY_BROKER);
+      // 3. WebRTC PeerJS with Google STUN Servers
+      initPeerJS();
+
+      // 4. WSS MQTT WebSocket Backup
+      initMqttWebSocket();
     }
 
-    function connectMqttWebSocket(broker) {
-      debugLog(`Connecting WSS WebSocket -> wss://${broker.host}:${broker.port}${broker.path}`, 'info');
-
-      const clientId = `csso_${Math.random().toString(36).substring(2, 10)}`;
-      mqttClient = new Paho.MQTT.Client(broker.host, broker.port, broker.path, clientId);
-
-      mqttClient.onConnectionLost = (responseObject) => {
-        if (responseObject.errorCode !== 0) {
-          debugLog(`WSS Connection Lost: ${responseObject.errorMessage}. Reconnecting...`, 'warn');
-          setTimeout(() => connectMqttWebSocket(broker), 2000);
+    function initPeerJS() {
+      const hostPeerId = `csso_host_${currentRoomId}`;
+      const peerOptions = {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' }
+          ]
         }
       };
 
-      mqttClient.onMessageArrived = (message) => {
-        try {
-          const payload = JSON.parse(message.payloadString);
-          processReceivedPayload(payload);
-        } catch(e){}
-      };
+      try {
+        myPeer = new Peer(hostPeerId, peerOptions);
 
-      mqttClient.connect({
-        useSSL: true,
-        timeout: 5,
-        keepAliveInterval: 30,
-        onSuccess: () => {
-          debugLog(`WSS WebSocket Connected Successfully to ${broker.host}!`, 'success');
-          mqttClient.subscribe(mqttTopic);
-          
-          const statusTag = document.getElementById('playerStatusTag');
-          if (statusTag) {
-            statusTag.textContent = "WSS Connected";
-            statusTag.className = "text-[10px] text-emerald-400 font-bold";
-          }
+        myPeer.on('open', (id) => {
+          debugLog(`WebRTC Host Peer Established with Google STUN! ID: ${id}`, 'success');
+        });
 
-          // If local player already registered, resend join notification
-          if (localPlayer) {
-            sendSyncEvent('PLAYER_JOINED', localPlayer);
-          }
-        },
-        onFailure: (err) => {
-          debugLog(`WSS Connection Failed (${broker.host}): ${err.errorMessage}`, 'error');
-          if (broker === PRIMARY_BROKER) {
-            debugLog(`Failing over to Secondary WSS Broker (${SECONDARY_BROKER.host})...`, 'warn');
-            setTimeout(() => connectMqttWebSocket(SECONDARY_BROKER), 1000);
+        myPeer.on('connection', (conn) => {
+          debugLog(`Player connected directly via WebRTC STUN: ${conn.peer}`, 'success');
+          playerPeerConns.push(conn);
+
+          conn.on('data', (data) => processReceivedPayload(data));
+          conn.on('close', () => {
+            playerPeerConns = playerPeerConns.filter(c => c !== conn);
+          });
+        });
+
+        myPeer.on('error', (err) => {
+          if (err.type === 'unavailable-id') {
+            debugLog(`Host Peer ID active. Initializing as WebRTC Player...`, 'info');
+            initPlayerPeer(hostPeerId, peerOptions);
           } else {
-            setTimeout(() => connectMqttWebSocket(PRIMARY_BROKER), 3000);
+            debugLog(`PeerJS Warning: ${err.type} - ${err.message}`, 'warn');
           }
-        }
+        });
+      } catch(e) {
+        debugLog(`PeerJS Exception: ${e.message}`, 'error');
+      }
+    }
+
+    function initPlayerPeer(hostPeerId, peerOptions) {
+      if (myPeer && !myPeer.destroyed) myPeer.destroy();
+
+      myPeer = new Peer(peerOptions);
+      myPeer.on('open', (myId) => {
+        debugLog(`Player WebRTC Peer ID: ${myId}. Connecting to Host...`, 'info');
+        connectToHostPeer(hostPeerId);
       });
+    }
+
+    function connectToHostPeer(hostPeerId) {
+      if (!myPeer) return;
+
+      hostPeerConn = myPeer.connect(hostPeerId, { reliable: true });
+
+      hostPeerConn.on('open', () => {
+        debugLog(`WebRTC Direct Channel Open with Host!`, 'success');
+        updateStatusBadge("WebRTC Connected");
+        if (localPlayer) sendSyncEvent('PLAYER_JOINED', localPlayer);
+      });
+
+      hostPeerConn.on('data', (data) => processReceivedPayload(data));
+      hostPeerConn.on('close', () => {
+        setTimeout(() => connectToHostPeer(hostPeerId), 2000);
+      });
+    }
+
+    function initMqttWebSocket() {
+      const brokerHost = "broker.hivemq.com";
+      const brokerPort = 8884;
+      const clientId = `csso_${Math.random().toString(36).substring(2, 10)}`;
+
+      try {
+        mqttClient = new Paho.MQTT.Client(brokerHost, brokerPort, "/mqtt", clientId);
+
+        mqttClient.onConnectionLost = (resp) => {
+          if (resp.errorCode !== 0) {
+            setTimeout(initMqttWebSocket, 2000);
+          }
+        };
+
+        mqttClient.onMessageArrived = (message) => {
+          try {
+            processReceivedPayload(JSON.parse(message.payloadString));
+          } catch(e){}
+        };
+
+        mqttClient.connect({
+          useSSL: true,
+          timeout: 5,
+          keepAliveInterval: 30,
+          onSuccess: () => {
+            debugLog(`WSS WebSocket Backup Connected! Topic: ${mqttTopic}`, 'success');
+            mqttClient.subscribe(mqttTopic);
+            updateStatusBadge("WSS WebSocket Active");
+            if (localPlayer) sendSyncEvent('PLAYER_JOINED', localPlayer);
+          },
+          onFailure: () => {
+            debugLog(`WSS WebSocket fallback offline. Relying on WebRTC/Bus.`, 'warn');
+          }
+        });
+      } catch(e){}
+    }
+
+    function updateStatusBadge(txt) {
+      const tag = document.getElementById('playerStatusTag');
+      if (tag) {
+        tag.textContent = txt;
+        tag.className = "text-[10px] text-emerald-400 font-bold";
+      }
     }
 
     function sendSyncEvent(type, payload) {
@@ -969,23 +1043,31 @@
       const bodyStr = JSON.stringify(eventObj);
       debugLog(`Sending -> ${type}`, 'info');
 
-      // Send via WSS MQTT WebSocket
+      // 1. WebRTC
+      if (hostPeerConn && hostPeerConn.open) {
+        try { hostPeerConn.send(eventObj); } catch(e){}
+      }
+      playerPeerConns.forEach(conn => {
+        if (conn && conn.open) {
+          try { conn.send(eventObj); } catch(e){}
+        }
+      });
+
+      // 2. WSS MQTT
       if (mqttClient && mqttClient.isConnected()) {
         try {
-          const message = new Paho.MQTT.Message(bodyStr);
-          message.destinationName = mqttTopic;
-          mqttClient.send(message);
-        } catch(e) {
-          debugLog(`WSS Publish Exception: ${e.message}`, 'error');
-        }
+          const msg = new Paho.MQTT.Message(bodyStr);
+          msg.destinationName = mqttTopic;
+          mqttClient.send(msg);
+        } catch(e){}
       }
 
-      // Send via local BroadcastChannel
+      // 3. Local BroadcastChannel
       if (broadcastChannel) {
         try { broadcastChannel.postMessage(eventObj); } catch(e){}
       }
 
-      // Send via LocalStorage bus
+      // 4. LocalStorage Bus
       try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
     }
 
@@ -1001,8 +1083,20 @@
         processedEventKeys = new Set(arr.slice(50));
       }
 
-      debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId || 'unknown'}`, 'success');
+      debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId || 'peer'}`, 'success');
       handleSyncEvent(eventObj);
+    }
+
+    // ==================== HOST HEARTBEAT & AUTO RE-SYNC ====================
+    function runHostHeartbeat() {
+      // If we have registered players or are in host view, broadcast periodic Heartbeat
+      if (document.getElementById('hostViewSection').classList.contains('hidden') === false || registeredPlayers.length > 0) {
+        sendSyncEvent('HOST_HEARTBEAT', {
+          playerIds: registeredPlayers.map(p => p.id),
+          gameState: activeGameState,
+          qIndex: currentQIndex
+        });
+      }
     }
 
     function handleSyncEvent(eventObj) {
@@ -1010,6 +1104,15 @@
 
       if (type === 'PING_TEST') {
         debugLog(`Received Test PING from device [${senderId}]`, 'warn');
+      } else if (type === 'HOST_HEARTBEAT') {
+        // Phone receives Heartbeat from Host
+        if (localPlayer && payload && Array.isArray(payload.playerIds)) {
+          // If phone registered locally but isn't acknowledged in Host's player list, RE-ANNOUNCE!
+          if (!payload.playerIds.includes(localPlayer.id)) {
+            debugLog(`Re-transmitting PLAYER_JOINED to Host (Auto-Sync)...`, 'warn');
+            sendSyncEvent('PLAYER_JOINED', localPlayer);
+          }
+        }
       } else if (type === 'PLAYER_JOINED') {
         if (payload && payload.id && payload.name) {
           if (!registeredPlayers.some(p => p.id === payload.id)) {
