@@ -12,8 +12,6 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- PeerJS -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -116,7 +114,7 @@
 
         <div class="flex items-center space-x-3">
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Port 443 HTTPS REST Sync Active
+            <i class="fa-solid fa-bolt mr-1"></i> Realtime SSE Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -241,6 +239,7 @@
                 <div>
                   <p class="text-xs text-slate-400">Connected Audience</p>
                   <p id="lobbyPlayerCount" class="text-2xl font-black text-cssoGold">0 Players</p>
+                  <p id="lobbyDeviceCount" class="text-[11px] text-emerald-400 font-semibold">(0 Devices Online)</p>
                 </div>
                 <i class="fa-solid fa-users text-3xl text-slate-600"></i>
               </div>
@@ -431,8 +430,8 @@
 
         <div class="space-y-3">
           <input type="text" id="playerNameInput" placeholder="Enter your full name..." class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-sm text-white text-center font-bold focus:border-cssoGold focus:outline-none">
-          <button onclick="registerPlayer()" class="w-full py-3 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-sm rounded-xl shadow-lg transition">
-            Join Game
+          <button onclick="registerPlayer()" class="w-full py-3.5 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <span>Join Game</span> <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
@@ -447,7 +446,7 @@
           </div>
           <div class="text-right">
             <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-slate-400">Connected (HTTPS 443)</p>
+            <p id="playerStatusTag" class="text-[10px] text-emerald-400 font-bold">Connected & Registered</p>
           </div>
         </div>
 
@@ -457,7 +456,7 @@
             <i class="fa-solid fa-spinner"></i>
           </div>
           <h3 class="text-lg font-bold text-white">Waiting for Host...</h3>
-          <p class="text-xs text-slate-400">Get ready! Questions will appear automatically on your screen.</p>
+          <p class="text-xs text-slate-400">You are registered! Questions will appear automatically on your screen.</p>
         </div>
 
         <!-- QUESTION ANSWERING SCREEN -->
@@ -785,6 +784,7 @@
     // ==================== GLOBAL STATE & ROOM ID ====================
     let questions = [];
     let registeredPlayers = []; // { id, name, score, totalTime, wonIndividual }
+    let connectedDevices = new Set();
     let currentResponses = []; // { playerId, choiceIndex, timeTaken }
     let roundWinnersLog = []; // { qIndex, winnerPlayer }
     
@@ -793,20 +793,14 @@
     let stageTimerInterval = null;
     let stageTimeRemaining = 0;
     let localPlayer = null;
+    let registrationAckReceived = false;
 
     const myDeviceId = `dev_${Math.random().toString(36).substring(2, 8)}`;
     let currentRoomId = 'csso_trivia_2026';
-    let isHost = true; // Default to Host unless ?join=true
+    let isHost = true;
     let broadcastChannel = null;
     let processedEventKeys = new Set();
-
-    // Standard Port 443 Transport Variables
-    let myPeer = null;
-    let hostPeerConn = null;
-    let playerPeerConns = [];
-
-    // Public Firebase Realtime Database REST URL (Standard Port 443)
-    const REST_FIREBASE_URL = `https://csso-trivia-2026-default-rtdb.firebaseio.com/rooms`;
+    let sseSource = null;
 
     // ==================== INITIALIZATION ====================
     window.addEventListener('DOMContentLoaded', () => {
@@ -831,8 +825,39 @@
 
       initSyncEngine();
 
-      // Start 1.5s Sync Loop
-      setInterval(syncLoop, 1500);
+      if (!isHost) {
+        sendSyncEvent('PHONE_CONNECTED', { deviceId: myDeviceId });
+      }
+
+      // Throttled Host Heartbeat (Runs every 5 seconds, not 1s!)
+      setInterval(() => {
+        if (isHost) {
+          sendSyncEvent('HOST_HEARTBEAT', {
+            playerIds: registeredPlayers.map(p => p.id),
+            gameState: activeGameState,
+            qIndex: currentQIndex
+          });
+        }
+      }, 5000);
+
+      // Mobile Auto-Retry Registration Handshake
+      setInterval(() => {
+        if (!isHost && localPlayer && !registrationAckReceived) {
+          debugLog(`Re-transmitting PLAYER_JOINED payload (Auto-Handshake Retry)...`, 'warn');
+          sendSyncEvent('PLAYER_JOINED', localPlayer);
+        }
+      }, 3000);
+
+      // Mobile Tab Focus & Wake Recovery
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          debugLog(`Device resumed. Reconnecting SSE Stream...`, 'info');
+          initSSESream();
+          if (!isHost && localPlayer) {
+            sendSyncEvent('PLAYER_JOINED', localPlayer);
+          }
+        }
+      });
     });
 
     // ==================== LIVE DEBUGGER ENGINE ====================
@@ -889,9 +914,8 @@
       debugLog(`Sent test PING out to room [${currentRoomId}]`, 'info');
     }
 
-    // ==================== PORT 443 MULTI-TRANSPORT SYNC ENGINE ====================
+    // ==================== REALTIME SSE SYNC ENGINE ====================
     function initSyncEngine() {
-      // 1. Same-Browser Tab BroadcastChannel
       if (typeof BroadcastChannel !== 'undefined') {
         try {
           broadcastChannel = new BroadcastChannel(`csso_chan_${currentRoomId}`);
@@ -901,113 +925,42 @@
         } catch(e){}
       }
 
-      // 2. LocalStorage Bus
       window.addEventListener('storage', (e) => {
         if (e.key === `csso_bus_${currentRoomId}` && e.newValue) {
           try { processReceivedPayload(JSON.parse(e.newValue)); } catch(err){}
         }
       });
 
-      // 3. WebRTC PeerJS via Standard Port 443
-      initPeerJS();
+      initSSESream();
     }
 
-    function initPeerJS() {
-      const hostPeerId = `csso_host_${currentRoomId}`;
-      const peerOptions = {
-        host: '0.peerjs.com',
-        port: 443,
-        path: '/',
-        secure: true,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ]
-        }
-      };
+    function initSSESream() {
+      if (sseSource) {
+        try { sseSource.close(); } catch(e){}
+      }
+
+      const sseUrl = `https://ntfy.sh/csso_trivia_${currentRoomId}/sse`;
+      debugLog(`Connecting to Realtime SSE Stream: ${sseUrl}`, 'info');
 
       try {
-        if (isHost) {
-          myPeer = new Peer(hostPeerId, peerOptions);
-          myPeer.on('open', (id) => {
-            debugLog(`WebRTC Host Peer Established on Port 443! ID: ${id}`, 'success');
-          });
+        sseSource = new EventSource(sseUrl);
 
-          myPeer.on('connection', (conn) => {
-            debugLog(`Player Connected via WebRTC Direct: ${conn.peer}`, 'success');
-            playerPeerConns.push(conn);
-            conn.on('data', (data) => processReceivedPayload(data));
-            conn.on('close', () => { playerPeerConns = playerPeerConns.filter(c => c !== conn); });
-          });
+        sseSource.onmessage = (event) => {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed && parsed.message) {
+              const eventObj = JSON.parse(parsed.message);
+              processReceivedPayload(eventObj);
+            }
+          } catch(err){}
+        };
 
-          myPeer.on('error', (err) => {
-            debugLog(`Host PeerJS Info: ${err.type}`, 'warn');
-          });
-        } else {
-          initPlayerPeer(hostPeerId, peerOptions);
-        }
+        sseSource.onerror = () => {
+          debugLog(`SSE Stream Notice: Reconnecting stream...`, 'warn');
+        };
       } catch(e) {
-        debugLog(`PeerJS Exception: ${e.message}`, 'error');
+        debugLog(`SSE Not Supported. Falling back to HTTP polling.`, 'error');
       }
-    }
-
-    function initPlayerPeer(hostPeerId, peerOptions) {
-      if (myPeer && !myPeer.destroyed) myPeer.destroy();
-
-      myPeer = new Peer(peerOptions);
-      myPeer.on('open', (myId) => {
-        debugLog(`Player Peer ID: ${myId}. Connecting to Host...`, 'info');
-        connectToHostPeer(hostPeerId);
-      });
-    }
-
-    function connectToHostPeer(hostPeerId) {
-      if (!myPeer) return;
-
-      hostPeerConn = myPeer.connect(hostPeerId, { reliable: true });
-
-      hostPeerConn.on('open', () => {
-        debugLog(`WebRTC Direct Channel Open with Host!`, 'success');
-        updateStatusTag("WebRTC Direct (Port 443)");
-        if (localPlayer) sendSyncEvent('PLAYER_JOINED', localPlayer);
-      });
-
-      hostPeerConn.on('data', (data) => processReceivedPayload(data));
-      hostPeerConn.on('close', () => {
-        setTimeout(() => connectToHostPeer(hostPeerId), 3000);
-      });
-    }
-
-    function updateStatusTag(txt) {
-      const tag = document.getElementById('playerStatusTag');
-      if (tag) {
-        tag.textContent = txt;
-        tag.className = "text-[10px] text-emerald-400 font-bold";
-      }
-    }
-
-    // ==================== UNIVERSAL PORT 443 HTTPS REST RELAY ====================
-    async function syncLoop() {
-      // 1. Host Heartbeat Broadcast (ONLY IF THIS TAB IS HOST)
-      if (isHost) {
-        sendSyncEvent('HOST_HEARTBEAT', {
-          playerIds: registeredPlayers.map(p => p.id),
-          gameState: activeGameState,
-          qIndex: currentQIndex
-        });
-      }
-
-      // 2. Poll Public HTTPS Port 443 REST Relay
-      try {
-        const resp = await fetch(`${REST_FIREBASE_URL}/${currentRoomId}/events.json?limitToLast=15`, { cache: 'no-store' });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data && typeof data === 'object') {
-            Object.values(data).forEach(evt => processReceivedPayload(evt));
-          }
-        }
-      } catch(e){}
     }
 
     async function sendSyncEvent(type, payload) {
@@ -1020,43 +973,39 @@
       };
 
       const bodyStr = JSON.stringify(eventObj);
-      debugLog(`Sending -> ${type}`, 'info');
 
-      // 1. WebRTC Data Channels
-      if (hostPeerConn && hostPeerConn.open) {
-        try { hostPeerConn.send(eventObj); } catch(e){}
+      if (type !== 'HOST_HEARTBEAT') {
+        debugLog(`Sending -> ${type}`, 'info');
       }
-      playerPeerConns.forEach(conn => {
-        if (conn && conn.open) {
-          try { conn.send(eventObj); } catch(e){}
+
+      // 1. Publish via HTTP POST
+      try {
+        const resp = await fetch(`https://ntfy.sh/csso_trivia_${currentRoomId}`, {
+          method: 'POST',
+          body: bodyStr
+        });
+
+        if (resp.status === 429) {
+          debugLog(`HTTP 429 Rate Limit hit! Backing off POST requests.`, 'error');
         }
-      });
+      } catch(e){}
 
       // 2. Local BroadcastChannel
       if (broadcastChannel) {
         try { broadcastChannel.postMessage(eventObj); } catch(e){}
       }
 
-      // 3. LocalStorage Event Bus
+      // 3. LocalStorage Bus
       try { localStorage.setItem(`csso_bus_${currentRoomId}`, bodyStr); } catch(e){}
-
-      // 4. Universal Port 443 HTTPS REST Publish
-      try {
-        fetch(`${REST_FIREBASE_URL}/${currentRoomId}/events.json`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: bodyStr
-        }).catch(() => {});
-      } catch(e){}
     }
 
     function processReceivedPayload(eventObj) {
       if (!eventObj || !eventObj.type || !eventObj._ts) return;
 
-      // CRITICAL FIX #1: DROP SELF-ECHO MESSAGES IMMEDIATELY!
+      // STRICT DROP SELF-ECHO MESSAGES
       if (eventObj.senderId === myDeviceId) return;
 
-      const eventKey = `${eventObj.type}_${eventObj._ts}`;
+      const eventKey = `${eventObj.type}_${eventObj._ts}_${eventObj.senderId}`;
       if (processedEventKeys.has(eventKey)) return;
       processedEventKeys.add(eventKey);
 
@@ -1065,7 +1014,10 @@
         processedEventKeys = new Set(arr.slice(50));
       }
 
-      debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId || 'peer'}`, 'success');
+      if (eventObj.type !== 'HOST_HEARTBEAT') {
+        debugLog(`Inbound <- ${eventObj.type} from ${eventObj.senderId}`, 'success');
+      }
+
       handleSyncEvent(eventObj);
     }
 
@@ -1074,14 +1026,11 @@
 
       if (type === 'PING_TEST') {
         debugLog(`Received Test PING from device [${senderId}]`, 'warn');
-      } else if (type === 'HOST_HEARTBEAT') {
-        // Player smartphone receives Heartbeat from Host
-        if (!isHost && localPlayer && payload && Array.isArray(payload.playerIds)) {
-          // If phone is registered locally but host's player list missing this ID, RE-SYNC!
-          if (!payload.playerIds.includes(localPlayer.id)) {
-            debugLog(`Re-transmitting PLAYER_JOINED to Host (Auto-Sync)...`, 'warn');
-            sendSyncEvent('PLAYER_JOINED', localPlayer);
-          }
+      } else if (type === 'PHONE_CONNECTED') {
+        if (isHost && senderId) {
+          connectedDevices.add(senderId);
+          updateLobbyPlayerCounts();
+          debugLog(`Phone Connected Handshake Received from ${senderId}`, 'info');
         }
       } else if (type === 'PLAYER_JOINED') {
         if (payload && payload.id && payload.name) {
@@ -1096,6 +1045,24 @@
             updateLobbyPlayerCounts();
             debugLog(`Player Registered: ${payload.name} (Total: ${registeredPlayers.length})`, 'success');
           }
+
+          if (isHost) {
+            sendSyncEvent('PLAYER_ACK', { playerId: payload.id });
+          }
+        }
+      } else if (type === 'PLAYER_ACK') {
+        if (!isHost && localPlayer && payload && payload.playerId === localPlayer.id) {
+          registrationAckReceived = true;
+          debugLog(`Host Confirmed Player Registration Handshake!`, 'success');
+          document.getElementById('playerStatusTag').textContent = "Connected & Verified";
+        }
+      } else if (type === 'HOST_HEARTBEAT') {
+        if (!isHost && localPlayer && payload && Array.isArray(payload.playerIds)) {
+          if (!payload.playerIds.includes(localPlayer.id)) {
+            sendSyncEvent('PLAYER_JOINED', localPlayer);
+          } else {
+            registrationAckReceived = true;
+          }
         }
       } else if (type === 'RESPONSE_SUBMITTED') {
         if (payload && payload.playerId && payload.choiceIndex !== undefined) {
@@ -1107,8 +1074,10 @@
       } else if (type === 'GAME_RESET') {
         activeGameState = 'LOBBY';
         registeredPlayers = [];
+        connectedDevices.clear();
         currentResponses = [];
         roundWinnersLog = [];
+        registrationAckReceived = false;
         updateLobbyPlayerCounts();
         renderWinnersLog();
 
@@ -1487,6 +1456,7 @@
     function launchGameAndReset() {
       activeGameState = 'LOBBY';
       registeredPlayers = [];
+      connectedDevices.clear();
       currentResponses = [];
       roundWinnersLog = [];
       currentQIndex = 0;
@@ -1503,6 +1473,7 @@
       if (confirm("Wipe all player registrations, scores, and round winner records? (Your trivia questions will remain intact)")) {
         activeGameState = 'LOBBY';
         registeredPlayers = [];
+        connectedDevices.clear();
         currentResponses = [];
         roundWinnersLog = [];
         currentQIndex = 0;
@@ -1518,7 +1489,9 @@
 
     function updateLobbyPlayerCounts() {
       const count = registeredPlayers.length;
+      const devCount = Math.max(connectedDevices.size, count);
       document.getElementById('lobbyPlayerCount').textContent = `${count} Players`;
+      document.getElementById('lobbyDeviceCount').textContent = `(${devCount} Devices Online)`;
       document.getElementById('stagePlayerCount').textContent = `${count} Joined`;
       document.getElementById('stageLobbyCount').textContent = `${count}`;
     }
@@ -1588,7 +1561,6 @@
 
       sendSyncEvent('QUESTION_START', qPayload);
 
-      // Start Countdown Timer
       stageTimeRemaining = q.timeLimit;
       document.getElementById('stageTimer').textContent = `${stageTimeRemaining}s`;
 
@@ -1617,7 +1589,6 @@
       const correctCount = correctResponses.length;
       const correctPct = totalResponses > 0 ? Math.round((correctCount / totalResponses) * 100) : 0;
 
-      // Update Player Scores
       correctResponses.forEach(r => {
         const p = registeredPlayers.find(pl => pl.id === r.playerId);
         if (p) {
@@ -1779,12 +1750,12 @@
 
     // ==================== PLAYER VIEW & INTERACTIONS ====================
     function registerPlayer() {
-      const name = document.getElementById('playerNameInput').value.trim();
+      let name = document.getElementById('playerNameInput').value.trim();
       if (!name) {
-        alert("Please enter your name!");
-        return;
+        name = `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
       }
 
+      registrationAckReceived = false;
       localPlayer = {
         id: `player_${Date.now()}_${Math.floor(Math.random()*1000)}`,
         name: name,
