@@ -55,6 +55,17 @@
     .podium-first { height: 180px; background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); }
     .podium-second { height: 130px; background: linear-gradient(180deg, #94a3b8 0%, #475569 100%); }
     .podium-third { height: 100px; background: linear-gradient(180deg, #d97706 0%, #78350f 100%); }
+
+    /* Floating Wave Pop Animation */
+    @keyframes floatPop {
+      0% { transform: translateY(20px) scale(0.8); opacity: 0; }
+      20% { transform: translateY(0) scale(1.05); opacity: 1; }
+      80% { transform: translateY(-10px) scale(1); opacity: 1; }
+      100% { transform: translateY(-30px) scale(0.9); opacity: 0; }
+    }
+    .animate-float-pop {
+      animation: floatPop 3s ease-out forwards;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col pb-28">
@@ -83,7 +94,10 @@
   </header>
 
   <!-- MAIN CONTAINER -->
-  <main class="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto">
+  <main class="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto relative">
+
+    <!-- FLOATING PLAYER POP NOTIFICATION OVERLAY -->
+    <div id="stageWaveOverlay" class="pointer-events-none fixed top-20 right-6 z-50 flex flex-col space-y-2 items-end"></div>
 
     <!-- ==================== HOST / STAGE VIEW ==================== -->
     <div id="hostViewSection" class="space-y-6">
@@ -102,6 +116,9 @@
         </div>
 
         <div class="flex items-center space-x-3">
+          <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs">
+            <i class="fa-solid fa-volume-high mr-1"></i> Music On
+          </button>
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
             <i class="fa-solid fa-circle-check mr-1"></i> Firebase Realtime Active
           </span>
@@ -285,9 +302,14 @@
           <div id="stageQuestionScreen" class="hidden py-6 space-y-6 my-auto">
             <div class="flex items-center justify-between">
               <span id="stageQNumber" class="text-sm font-bold text-cssoGold uppercase tracking-wider">Question 1</span>
-              <div class="bg-cssoNavy px-4 py-2 rounded-xl border border-cssoNavyLight flex items-center space-x-2">
-                <i class="fa-solid fa-clock text-cssoGold"></i>
-                <span id="stageTimer" class="text-xl font-black text-white">15s</span>
+              <div class="flex items-center space-x-3">
+                <button onclick="skipCurrentQuestion()" class="px-3 py-1.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-600 font-bold text-xs transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-forward-step"></i> Skip Question
+                </button>
+                <div class="bg-cssoNavy px-4 py-2 rounded-xl border border-cssoNavyLight flex items-center space-x-2">
+                  <i class="fa-solid fa-clock text-cssoGold"></i>
+                  <span id="stageTimer" class="text-xl font-black text-white">15s</span>
+                </div>
               </div>
             </div>
 
@@ -397,6 +419,13 @@
           </div>
         </div>
 
+        <div class="bg-cssoNavy p-3 rounded-xl border border-cssoNavyLight flex items-center justify-between">
+          <span class="text-xs text-slate-300 font-medium">Say hi to the stage!</span>
+          <button onclick="sendPlayerWave()" class="px-3.5 py-1.5 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-xs rounded-lg shadow transition transform active:scale-95 flex items-center gap-1.5">
+            <i class="fa-solid fa-hand-wave"></i> Pop My Name!
+          </button>
+        </div>
+
         <div id="playerWaitingScreen" class="py-10 text-center space-y-3">
           <div class="w-12 h-12 mx-auto rounded-full bg-cssoNavyLight text-cssoGold flex items-center justify-center text-xl animate-spin">
             <i class="fa-solid fa-spinner"></i>
@@ -437,6 +466,31 @@
     </div>
 
   </main>
+
+  <!-- RAW JSON PASTE MODAL -->
+  <div id="jsonModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-cssoNavyDark max-w-2xl w-full p-6 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-code text-cssoGold"></i> Raw JSON Question Data
+        </h3>
+        <button onclick="closeRawJSONModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <p class="text-xs text-slate-300">View or paste your raw JSON question array below:</p>
+      <textarea id="rawJsonTextArea" rows="10" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-xs font-mono text-emerald-400 focus:border-cssoGold focus:outline-none"></textarea>
+
+      <div class="flex items-center justify-between pt-2">
+        <button onclick="copyRawJSONText()" class="px-3 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg transition">
+          <i class="fa-solid fa-copy mr-1"></i> Copy to Clipboard
+        </button>
+        <div class="flex items-center space-x-2">
+          <button onclick="closeRawJSONModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">Cancel</button>
+          <button onclick="applyRawJSONText()" class="px-4 py-2 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-xs rounded-lg transition">Apply JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- GRAND PODIUM MODAL -->
   <div id="podiumModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4">
@@ -500,15 +554,102 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
+    // ==================== WEB AUDIO SYNTHESIZER (BASS MUSIC) ====================
+    let audioCtx = null;
+    let isMuted = false;
+    let musicInterval = null;
+
+    function playBassTimerMusic() {
+      if (isMuted) return;
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      stopBassTimerMusic();
+
+      let step = 0;
+      const bassNotes = [110, 110, 130.81, 110, 146.83, 130.81, 98, 110];
+
+      musicInterval = setInterval(() => {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (step % 2 === 0) {
+          const kickOsc = audioCtx.createOscillator();
+          const kickGain = audioCtx.createGain();
+          kickOsc.frequency.setValueAtTime(130, now);
+          kickOsc.frequency.exponentialRampToValueAtTime(0.01, now + 0.14);
+          kickGain.gain.setValueAtTime(0.7, now);
+          kickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+          kickOsc.connect(kickGain);
+          kickGain.connect(audioCtx.destination);
+          kickOsc.start(now);
+          kickOsc.stop(now + 0.14);
+        }
+
+        const bassOsc = audioCtx.createOscillator();
+        const bassGain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(bassNotes[step % bassNotes.length], now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, now);
+        filter.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+
+        bassGain.gain.setValueAtTime(0.3, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+        bassOsc.connect(filter);
+        filter.connect(bassGain);
+        bassGain.connect(audioCtx.destination);
+
+        bassOsc.start(now);
+        bassOsc.stop(now + 0.22);
+
+        step++;
+      }, 250);
+    }
+
+    function stopBassTimerMusic() {
+      if (musicInterval) {
+        clearInterval(musicInterval);
+        musicInterval = null;
+      }
+    }
+
+    function toggleMusicMute() {
+      isMuted = !isMuted;
+      const btn = document.getElementById('musicToggleBtn');
+      if (btn) {
+        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark mr-1"></i> Music Off' : '<i class="fa-solid fa-volume-high mr-1"></i> Music On';
+        btn.className = isMuted ? 'px-3 py-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs' : 'px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs';
+      }
+      if (isMuted) stopBassTimerMusic();
+    }
+
+    // ==================== DEFAULT 14 QUESTIONS FROM JSON ====================
     const DEFAULT_QUESTIONS = [
-      { id: "q1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Building the Future Together"], correctIndex: 2, timeLimit: 15 },
-      { id: "q2", text: "How many times has the CSSO Association offered the CSSO Academy?", options: ["This was the first time.", "This was the second time.", "This was the third time.", "This was the fourth time."], correctIndex: 0, timeLimit: 15 },
-      { id: "q3", text: "What was the primary takeaway from the CSSO Academy?", options: ["Participants implement a campus solution with a mentor.", "Participants write statewide policy alone.", "Participants evaluate other colleges.", "No follow-up project."], correctIndex: 0, timeLimit: 15 },
-      { id: "q4", text: "What had association leaders emphasized during Opening Remarks?", options: ["Competition among districts", "Shared leadership, student success, and collective wisdom", "Uniform organizational structures", "Individual performance assessment"], correctIndex: 1, timeLimit: 15 },
-      { id: "q5", text: "Keynote theme by Dr. Laurie Vázquez Scolari?", options: ["Developing AI tools", "Measuring vice presidents", "Reclaiming joy while sustaining authentic leadership", "Reducing leadership to compliance"], correctIndex: 2, timeLimit: 15 }
+      { id: "question_1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Building the Future Together"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_2", text: "How many times has the CSSO Association offered the CSSO Academy?", options: ["This was the first time.", "This was the second time.", "This was the third time.", "This was the fourth time."], correctIndex: 0, timeLimit: 15 },
+      { id: "question_3", text: "What was the primary takeaway from the CSSO Academy?", options: ["Participants would work with a mentor to implement a solution on their campus and present it at the Spring Conference.", "Participants would independently write a statewide policy proposal without mentor support.", "Participants would evaluate another college’s student-services division and issue recommendations.", "Participants would complete the academy without a follow-up project or presentation."], correctIndex: 0, timeLimit: 15 },
+      { id: "question_4", text: "During the Opening Welcome and CSSO Association Remarks, what had association leaders emphasized?", options: ["Competition among community college districts", "Shared leadership, student success, and collective wisdom", "Uniform organizational structures for every college", "Individual performance assessment"], correctIndex: 1, timeLimit: 15 },
+      { id: "question_5", text: "During Dr. Laurie Vázquez Scolari’s keynote, which leadership theme had been explored?", options: ["Developing effective AI tools to help all students", "Measuring vice presidents against one leadership style", "Reclaiming joy while sustaining authentic leadership", "Reducing leadership to regulatory compliance"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_6", text: "During the Belonging Under Pressure workshop, what had been addressed?", options: ["Faculty load calculation and curriculum sequencing", "Campus construction and bond oversight", "Equity, free speech, retention, and student success amid change", "Intercollegiate athletics recruitment"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_7", text: "During the Tomorrow’s Student Services workshop, what had been examined?", options: ["AI, data, emerging technology, and new forms of student support", "Historical enrollment practices", "Facilities maintenance technology", "Academic laboratory equipment"], correctIndex: 0, timeLimit: 15 },
+      { id: "question_8", text: "During the Dollars, Data, and Decisions workshop, what had been connected?", options: ["Athletic fundraising and ticket sales", "Classroom scheduling and faculty evaluation", "Budget strategy, staffing capacity, reporting, financial aid, and audit readiness", "Construction bidding and fleet replacement"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_9", text: "During the Community College League of California update, what had been the most useful executive takeaway?", options: ["Receiving a uniform solution for every district", "Understanding how statewide advocacy and policy could affect campus decisions", "Comparing vice presidents by legislative knowledge", "Better understanding of past legislation"], correctIndex: 1, timeLimit: 15 },
+      { id: "question_10", text: "During the Supporting the Whole Student workshop, what had been addressed?", options: ["Faculty hiring, curriculum, and laboratory safety", "Construction, parking, and transportation", "Basic needs, housing, mental health, wellness, equity, and access", "Athletics eligibility and team travel"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_11", text: "During the Strengthening the Student Pipeline workshop, what had been connected?", options: ["High school engagement, dual enrollment, guided pathways, and onboarding", "Post-graduation alumni relations", "Facilities planning and bond management", "Faculty contract negotiations"], correctIndex: 0, timeLimit: 15 },
+      { id: "question_12", text: "During the Leading Teams While Managing Risk workshop, what had been examined?", options: ["Classroom pedagogy and course assessment", "Athletic conference governance", "Title IX, policy, mandates, and compliance", "Capital project delivery methods"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_13", text: "During the Leadership Panel, what had best demonstrated shared wisdom?", options: ["Panelists had presented one unquestioned solution", "Participants had avoided difficult topics", "Leaders had compared approaches to common student-services challenges", "Discussion had remained theoretical"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_14", text: "During the Chancellor’s Office Q&A, how had the discussion been shaped?", options: ["By a fixed presentation unrelated to audience needs", "By evaluations of participating vice presidents", "By questions submitted by CSSOs before and during the session", "By topics limited to instructional affairs"], correctIndex: 2, timeLimit: 15 }
     ];
 
-    let questions = DEFAULT_QUESTIONS;
+    let questions = [];
     let registeredPlayers = [];
     let currentResponses = [];
     let roundWinnersLog = [];
@@ -526,10 +667,292 @@
         switchMainTab('player');
       }
 
+      loadSavedQuestions();
+      renderQuestionsList();
       updateQrCode();
       initFirebaseSync();
     });
 
+    // ==================== STORAGE & JSON NORMALIZER ====================
+    function loadSavedQuestions() {
+      try {
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v2');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const normalized = parseAndNormalizeQuestions(parsed);
+          if (normalized && normalized.length > 0) {
+            questions = normalized;
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load saved questions:", e);
+      }
+      questions = parseAndNormalizeQuestions(DEFAULT_QUESTIONS);
+      saveQuestionsToStorage();
+    }
+
+    function saveQuestionsToStorage() {
+      try {
+        localStorage.setItem('csso_trivia_questions_bank_v2', JSON.stringify(questions));
+      } catch(e) {
+        console.warn("localStorage error:", e);
+      }
+    }
+
+    function parseAndNormalizeQuestions(rawData) {
+      if (!rawData) return null;
+      let list = rawData;
+      if (typeof rawData === 'string') {
+        try { list = JSON.parse(rawData); } catch(e) { return null; }
+      }
+
+      if (!Array.isArray(list)) {
+        if (list && Array.isArray(list.questions)) list = list.questions;
+        else return null;
+      }
+
+      return list.map((item, idx) => {
+        const textStr = item.text || item.prompt || item.question || `Question ${idx + 1}`;
+        
+        let opts = [];
+        if (Array.isArray(item.options)) opts = item.options.map(o => String(o));
+        else if (Array.isArray(item.choices)) opts = item.choices.map(c => String(c));
+        else if (Array.isArray(item.answers)) opts = item.answers.map(a => String(a));
+        else opts = ["Option A", "Option B", "Option C", "Option D"];
+
+        let cIndex = 0;
+        if (item.correctIndex !== undefined && item.correctIndex !== null) cIndex = parseInt(item.correctIndex, 10);
+        else if (item.correct !== undefined && item.correct !== null) cIndex = parseInt(item.correct, 10);
+
+        if (isNaN(cIndex) || cIndex < 0 || cIndex >= opts.length) cIndex = 0;
+
+        let tLimit = parseInt(item.timeLimit || item.time || item.timer || 15, 10);
+        if (isNaN(tLimit) || tLimit <= 0) tLimit = 15;
+
+        return {
+          id: item.id || `q_${Date.now()}_${idx}`,
+          text: textStr,
+          options: opts,
+          correctIndex: cIndex,
+          timeLimit: tLimit
+        };
+      });
+    }
+
+    // ==================== QUESTION BUILDER CRUD ====================
+    function renderQuestionsList() {
+      const container = document.getElementById('questionsList');
+      const countText = document.getElementById('qCountText');
+      if (countText) countText.textContent = questions.length;
+
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (questions.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic py-4 text-center">No questions in bank. Click "Reset Defaults" or "Add New Question".</p>`;
+        return;
+      }
+
+      questions.forEach((q, idx) => {
+        const card = document.createElement('div');
+        card.className = "bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-md hover:border-slate-600 transition";
+        
+        const optionsHtml = q.options.map((opt, oIdx) => `
+          <span class="text-[11px] px-2 py-0.5 rounded ${oIdx === q.correctIndex ? 'bg-emerald-950 text-emerald-300 border border-emerald-600 font-bold' : 'bg-cssoNavyDark text-slate-400'}">
+            ${String.fromCharCode(65 + oIdx)}: ${escapeHtml(opt)}
+          </span>
+        `).join(' ');
+
+        card.innerHTML = `
+          <div class="space-y-1.5 flex-1">
+            <div class="flex items-center space-x-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cssoGold text-cssoNavy">#${idx + 1}</span>
+              <span class="text-xs font-semibold text-slate-400"><i class="fa-solid fa-clock mr-1"></i>${q.timeLimit}s</span>
+            </div>
+            <h4 class="text-sm font-bold text-white leading-snug">${escapeHtml(q.text)}</h4>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              ${optionsHtml}
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-1.5 self-end md:self-center">
+            <button onclick="moveQuestion(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 p-1.5 text-slate-500"' : 'class="p-1.5 text-slate-300 hover:text-cssoGold transition"'} title="Move Up">
+              <i class="fa-solid fa-arrow-up"></i>
+            </button>
+            <button onclick="moveQuestion(${idx}, 1)" ${idx === questions.length - 1 ? 'disabled class="opacity-30 p-1.5 text-slate-500"' : 'class="p-1.5 text-slate-300 hover:text-cssoGold transition"'} title="Move Down">
+              <i class="fa-solid fa-arrow-down"></i>
+            </button>
+            <button onclick="editQuestion(${idx})" class="p-1.5 text-slate-300 hover:text-emerald-400 transition" title="Edit">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button onclick="deleteQuestion(${idx})" class="p-1.5 text-slate-300 hover:text-rose-400 transition" title="Delete">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function saveQuestionFromForm() {
+      const qText = document.getElementById('qText').value.trim();
+      const opt0 = document.getElementById('qOpt0').value.trim();
+      const opt1 = document.getElementById('qOpt1').value.trim();
+      const opt2 = document.getElementById('qOpt2').value.trim();
+      const opt3 = document.getElementById('qOpt3').value.trim();
+      const correctVal = parseInt(document.getElementById('qCorrect').value, 10);
+      const timerVal = parseInt(document.getElementById('qTimer').value, 10) || 15;
+      const editIdx = parseInt(document.getElementById('editQuestionIndex').value, 10);
+
+      if (!qText || !opt0 || !opt1 || !opt2 || !opt3) {
+        alert("Please fill in the question prompt and all 4 options.");
+        return;
+      }
+
+      const qObj = {
+        id: editIdx >= 0 ? questions[editIdx].id : `q_${Date.now()}`,
+        text: qText,
+        options: [opt0, opt1, opt2, opt3],
+        correctIndex: correctVal,
+        timeLimit: timerVal
+      };
+
+      if (editIdx >= 0 && editIdx < questions.length) {
+        questions[editIdx] = qObj;
+      } else {
+        questions.push(qObj);
+      }
+
+      saveQuestionsToStorage();
+      resetForm();
+      renderQuestionsList();
+    }
+
+    function editQuestion(idx) {
+      const q = questions[idx];
+      if (!q) return;
+
+      document.getElementById('editQuestionIndex').value = idx;
+      document.getElementById('qText').value = q.text;
+      document.getElementById('qOpt0').value = q.options[0] || '';
+      document.getElementById('qOpt1').value = q.options[1] || '';
+      document.getElementById('qOpt2').value = q.options[2] || '';
+      document.getElementById('qOpt3').value = q.options[3] || '';
+      document.getElementById('qCorrect').value = q.correctIndex;
+      document.getElementById('qTimer').value = q.timeLimit;
+
+      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Question #${idx + 1}`;
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+      window.scrollTo({ top: 100, behavior: 'smooth' });
+    }
+
+    function cancelQuestionEdit() {
+      resetForm();
+    }
+
+    function resetForm() {
+      document.getElementById('editQuestionIndex').value = "-1";
+      document.getElementById('qText').value = "";
+      document.getElementById('qOpt0').value = "";
+      document.getElementById('qOpt1').value = "";
+      document.getElementById('qOpt2').value = "";
+      document.getElementById('qOpt3').value = "";
+      document.getElementById('qCorrect').value = "0";
+      document.getElementById('qTimer').value = "15";
+
+      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Add New Trivia Question`;
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+    }
+
+    function deleteQuestion(idx) {
+      if (confirm(`Delete Question #${idx + 1}?`)) {
+        questions.splice(idx, 1);
+        saveQuestionsToStorage();
+        renderQuestionsList();
+      }
+    }
+
+    function moveQuestion(idx, direction) {
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= questions.length) return;
+      const temp = questions[idx];
+      questions[idx] = questions[targetIdx];
+      questions[targetIdx] = temp;
+      saveQuestionsToStorage();
+      renderQuestionsList();
+    }
+
+    // ==================== JSON IMPORT / EXPORT ====================
+    function exportJSONFile() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `csso_trivia_questions_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importJSONFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const normalized = parseAndNormalizeQuestions(e.target.result);
+        if (normalized && normalized.length > 0) {
+          questions = normalized;
+          saveQuestionsToStorage();
+          renderQuestionsList();
+          alert(`Successfully imported ${questions.length} questions!`);
+        } else {
+          alert("Invalid JSON file format. Please make sure it's a valid questions array.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function openRawJSONModal() {
+      document.getElementById('rawJsonTextArea').value = JSON.stringify(questions, null, 2);
+      document.getElementById('jsonModal').classList.remove('hidden');
+    }
+
+    function closeRawJSONModal() {
+      document.getElementById('jsonModal').classList.add('hidden');
+    }
+
+    function copyRawJSONText() {
+      const area = document.getElementById('rawJsonTextArea');
+      area.select();
+      navigator.clipboard.writeText(area.value);
+      alert("JSON copied to clipboard!");
+    }
+
+    function applyRawJSONText() {
+      const val = document.getElementById('rawJsonTextArea').value;
+      const normalized = parseAndNormalizeQuestions(val);
+      if (normalized && normalized.length > 0) {
+        questions = normalized;
+        saveQuestionsToStorage();
+        renderQuestionsList();
+        closeRawJSONModal();
+        alert(`Loaded ${questions.length} questions from raw JSON!`);
+      } else {
+        alert("Failed to parse JSON text.");
+      }
+    }
+
+    function resetDefaultQuestions() {
+      if (confirm("Reset question bank to Fall 2026 CSSO Symposium default trivia questions?")) {
+        questions = parseAndNormalizeQuestions(DEFAULT_QUESTIONS);
+        saveQuestionsToStorage();
+        renderQuestionsList();
+      }
+    }
+
+    // ==================== FIREBASE REALTIME LISTENERS ====================
     function initFirebaseSync() {
       roomRef.child('players').on('value', (snapshot) => {
         const val = snapshot.val();
@@ -557,9 +980,45 @@
           currentResponses = [];
         }
       });
+
+      roomRef.child('waves').limitToLast(1).on('child_added', (snapshot) => {
+        const wave = snapshot.val();
+        if (wave && wave.name && (Date.now() - wave.timestamp < 10000)) {
+          triggerFloatingNamePop(wave.name);
+        }
+      });
+    }
+
+    function sendPlayerWave() {
+      if (!localPlayer) return;
+      roomRef.child('waves').push({
+        name: localPlayer.name,
+        timestamp: Date.now()
+      });
+    }
+
+    function triggerFloatingNamePop(name) {
+      const overlay = document.getElementById('stageWaveOverlay');
+      if (!overlay) return;
+
+      const pop = document.createElement('div');
+      pop.className = "px-4 py-2 bg-gradient-to-r from-cssoGold to-amber-500 text-cssoNavy font-black text-sm rounded-xl shadow-2xl border-2 border-white animate-float-pop flex items-center space-x-2";
+      pop.innerHTML = `<i class="fa-solid fa-hand-wave text-base"></i> <span>${escapeHtml(name)} says HI! 👋</span>`;
+
+      overlay.appendChild(pop);
+      setTimeout(() => pop.remove(), 3000);
+    }
+
+    function skipCurrentQuestion() {
+      if (confirm("Skip current timer and proceed straight to answer reveal?")) {
+        clearInterval(stageTimerInterval);
+        stopBassTimerMusic();
+        handleTimeExpired();
+      }
     }
 
     function launchGameAndReset() {
+      stopBassTimerMusic();
       roomRef.set({
         state: { activeGameState: 'LOBBY', currentQIndex: 0 },
         players: {},
@@ -607,6 +1066,8 @@
       stageTimeRemaining = q.timeLimit;
       document.getElementById('stageTimer').textContent = `${stageTimeRemaining}s`;
 
+      playBassTimerMusic();
+
       clearInterval(stageTimerInterval);
       stageTimerInterval = setInterval(() => {
         stageTimeRemaining--;
@@ -614,12 +1075,14 @@
 
         if (stageTimeRemaining <= 0) {
           clearInterval(stageTimerInterval);
+          stopBassTimerMusic();
           handleTimeExpired();
         }
       }, 1000);
     }
 
     function handleTimeExpired() {
+      stopBassTimerMusic();
       const q = questions[currentQIndex];
       const correctCard = document.getElementById(`stageOptCard_${q.correctIndex}`);
       if (correctCard) {
@@ -655,6 +1118,7 @@
     }
 
     function spinPrizeRandomizer() {
+      stopBassTimerMusic();
       const q = questions[currentQIndex];
       const correctPlayerIds = currentResponses.filter(r => r.choiceIndex === q.correctIndex).map(r => r.playerId);
       const eligiblePlayers = registeredPlayers.filter(p => correctPlayerIds.includes(p.id) && !p.wonIndividual);
@@ -833,6 +1297,7 @@
     }
 
     function triggerGrandPodium() {
+      stopBassTimerMusic();
       const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0));
       document.getElementById('podium1Name').textContent = sorted[0] ? sorted[0].name : '---';
       document.getElementById('podium1Score').textContent = `${sorted[0] ? sorted[0].score : 0} Correct`;
