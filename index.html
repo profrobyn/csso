@@ -71,10 +71,10 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col pb-28">
+<body class="min-h-screen flex flex-col pb-28" onclick="unlockAudioContextOnUserGesture()">
 
-  <!-- HIDDEN YOUTUBE AUDIO PLAYER CONTAINER -->
-  <div class="hidden">
+  <!-- OFF-SCREEN YOUTUBE PLAYER CONTAINER (Not display:none so browser allows iframe DOM layout) -->
+  <div style="position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; top: -9999px; left: -9999px;">
     <div id="youtubeAudioPlayer"></div>
   </div>
 
@@ -124,11 +124,14 @@
         </div>
 
         <div class="flex items-center space-x-3">
+          <button onclick="testYouTubeAudio()" class="px-3 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition">
+            <i class="fa-solid fa-music mr-1"></i> Test Track
+          </button>
           <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs">
-            <i class="fa-solid fa-volume-high mr-1"></i> YouTube Audio On
+            <i class="fa-solid fa-volume-high mr-1"></i> Music On
           </button>
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-circle-check mr-1"></i> Firebase Realtime Active
+            <i class="fa-solid fa-circle-check mr-1"></i> Realtime Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
             <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
@@ -585,36 +588,148 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== YOUTUBE AUDIO PLAYER INTEGRATION ====================
+    // ==================== YOUTUBE AUDIO PLAYER + FALLBACK SYNTH ENGINE ====================
     let ytPlayer = null;
     let isMuted = false;
-    const YOUTUBE_VIDEO_ID = 'xyG94SV3hBo'; // Exact YouTube Music Track requested
+    let audioUnlocked = false;
+    let ytErrorOccurred = false;
+    let synthMusicInterval = null;
+    let synthAudioCtx = null;
+    const YOUTUBE_VIDEO_ID = 'xyG94SV3hBo';
 
     function onYouTubeIframeAPIReady() {
       ytPlayer = new YT.Player('youtubeAudioPlayer', {
-        height: '0',
-        width: '0',
+        height: '200',
+        width: '200',
         videoId: YOUTUBE_VIDEO_ID,
         playerVars: {
           'autoplay': 0,
           'controls': 0,
           'loop': 1,
-          'playlist': YOUTUBE_VIDEO_ID
+          'playlist': YOUTUBE_VIDEO_ID,
+          'enablejsapi': 1,
+          'origin': window.location.origin
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onError': onPlayerError
         }
       });
     }
 
+    function onPlayerReady(event) {
+      ytErrorOccurred = false;
+    }
+
+    function onPlayerError(event) {
+      console.warn("YouTube Player embedding blocked (Error code " + event.data + "). Activating Web Audio Synth fallback.");
+      ytErrorOccurred = true;
+    }
+
+    function unlockAudioContextOnUserGesture() {
+      if (!audioUnlocked) {
+        audioUnlocked = true;
+        if (ytPlayer && typeof ytPlayer.playVideo === 'function' && !ytErrorOccurred) {
+          try {
+            ytPlayer.playVideo();
+            setTimeout(() => { ytPlayer.pauseVideo(); }, 150);
+          } catch(e) {}
+        }
+      }
+    }
+
+    function testYouTubeAudio() {
+      audioUnlocked = true;
+      if (isMuted) toggleMusicMute();
+      playBassTimerMusic();
+      setTimeout(() => { stopBassTimerMusic(); }, 3500);
+    }
+
     function playBassTimerMusic() {
       if (isMuted) return;
-      if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
-        ytPlayer.seekTo(0);
-        ytPlayer.playVideo();
+
+      // Try playing official YouTube track first if not blocked
+      if (ytPlayer && typeof ytPlayer.playVideo === 'function' && !ytErrorOccurred) {
+        try {
+          ytPlayer.seekTo(0);
+          ytPlayer.playVideo();
+          return;
+        } catch(e) {
+          console.warn("YouTube play attempt failed, using synth fallback.");
+        }
       }
+
+      // Fallback Synth Arcade Music
+      playSynthFallbackMusic();
     }
 
     function stopBassTimerMusic() {
       if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
-        ytPlayer.pauseVideo();
+        try { ytPlayer.pauseVideo(); } catch(e){}
+      }
+      stopSynthFallbackMusic();
+    }
+
+    function playSynthFallbackMusic() {
+      stopSynthFallbackMusic();
+      if (!synthAudioCtx) {
+        synthAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (synthAudioCtx.state === 'suspended') {
+        synthAudioCtx.resume();
+      }
+
+      let step = 0;
+      const bassNotes = [110, 110, 130.81, 110, 146.83, 130.81, 164.81, 146.83];
+      const leadNotes = [440, 523.25, 659.25, 523.25, 587.33, 659.25, 783.99, 659.25];
+
+      synthMusicInterval = setInterval(() => {
+        if (isMuted || !synthAudioCtx) return;
+        const now = synthAudioCtx.currentTime;
+
+        if (step % 2 === 0) {
+          const kickOsc = synthAudioCtx.createOscillator();
+          const kickGain = synthAudioCtx.createGain();
+          kickOsc.frequency.setValueAtTime(150, now);
+          kickOsc.frequency.exponentialRampToValueAtTime(0.01, now + 0.12);
+          kickGain.gain.setValueAtTime(0.5, now);
+          kickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          kickOsc.connect(kickGain);
+          kickGain.connect(synthAudioCtx.destination);
+          kickOsc.start(now);
+          kickOsc.stop(now + 0.12);
+        }
+
+        const bassOsc = synthAudioCtx.createOscillator();
+        const bassGain = synthAudioCtx.createGain();
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(bassNotes[step % bassNotes.length], now);
+        bassGain.gain.setValueAtTime(0.2, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        bassOsc.connect(bassGain);
+        bassGain.connect(synthAudioCtx.destination);
+        bassOsc.start(now);
+        bassOsc.stop(now + 0.15);
+
+        const leadOsc = synthAudioCtx.createOscillator();
+        const leadGain = synthAudioCtx.createGain();
+        leadOsc.type = 'square';
+        leadOsc.frequency.setValueAtTime(leadNotes[step % leadNotes.length], now);
+        leadGain.gain.setValueAtTime(0.1, now);
+        leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        leadOsc.connect(leadGain);
+        leadGain.connect(synthAudioCtx.destination);
+        leadOsc.start(now);
+        leadOsc.stop(now + 0.12);
+
+        step++;
+      }, 160);
+    }
+
+    function stopSynthFallbackMusic() {
+      if (synthMusicInterval) {
+        clearInterval(synthMusicInterval);
+        synthMusicInterval = null;
       }
     }
 
@@ -622,13 +737,10 @@
       isMuted = !isMuted;
       const btn = document.getElementById('musicToggleBtn');
       if (btn) {
-        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark mr-1"></i> Audio Off' : '<i class="fa-solid fa-volume-high mr-1"></i> YouTube Audio On';
+        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark mr-1"></i> Music Off' : '<i class="fa-solid fa-volume-high mr-1"></i> Music On';
         btn.className = isMuted ? 'px-3 py-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs' : 'px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs';
       }
-      if (ytPlayer && typeof ytPlayer.mute === 'function') {
-        if (isMuted) ytPlayer.mute();
-        else ytPlayer.unMute();
-      }
+      if (isMuted) stopBassTimerMusic();
     }
 
     // ==================== DEFAULT 14 SYMPOSIUM QUESTIONS ====================
@@ -679,7 +791,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v7');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v8');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -697,7 +809,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v7', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v8', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -1059,6 +1171,7 @@
     }
 
     function startQuestionSequence(qIndex) {
+      unlockAudioContextOnUserGesture();
       if (qIndex < 0 || qIndex >= questions.length) {
         triggerGrandPodium();
         return;
@@ -1128,7 +1241,6 @@
       const correctCount = correctResponses.length;
       const correctPct = totalResponses > 0 ? Math.round((correctCount / totalResponses) * 100) : 0;
 
-      // Award Points Based on Centiseconds Remaining
       correctResponses.forEach(r => {
         let pts = r.centisecondsRemaining;
         if (pts === undefined || pts === null) {
@@ -1449,7 +1561,7 @@
       document.getElementById('podium1Score').textContent = `${(sorted[0] ? sorted[0].score : 0).toLocaleString()} pts`;
       document.getElementById('podium2Name').textContent = sorted[1] ? sorted[1].name : '---';
       document.getElementById('podium2Score').textContent = `${(sorted[1] ? sorted[1].score : 0).toLocaleString()} pts`;
-      document.getElementById('podium3Name').textContent = sorted[2] ? sorted[2].name : '---';
+      document.getElementById('podium3Name').textContent = sorted[3] ? sorted[2].name : '---';
       document.getElementById('podium3Score').textContent = `${(sorted[2] ? sorted[2].score : 0).toLocaleString()} pts`;
       document.getElementById('podiumModal').classList.remove('hidden');
       confetti({ particleCount: 150, spread: 90 });
