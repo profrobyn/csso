@@ -122,7 +122,7 @@
         </div>
 
         <div class="flex items-center space-x-3">
-          <button onclick="testYouTubeAudio()" class="px-3 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition">
+          <button onclick="testAudio()" class="px-3 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition">
             <i class="fa-solid fa-music mr-1"></i> Test Song
           </button>
           <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs">
@@ -132,7 +132,7 @@
             <i class="fa-solid fa-circle-check mr-1"></i> Realtime Sync Active
           </span>
           <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
-            <i class="fa-solid fa-trash-can mr-1"></i> Wipe Responses
+            <i class="fa-solid fa-trash-can mr-1"></i> Wipe Lobby & Game
           </button>
         </div>
       </div>
@@ -233,8 +233,8 @@
         <div class="bg-gradient-to-br from-cssoNavyLight to-cssoNavyDark p-6 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-6">
           <div>
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Event Launch Portal</span>
-            <h2 class="text-2xl font-extrabold text-white mt-2">Ready to Start the CSSO Trivia Giveaway?</h2>
-            <p class="text-sm text-slate-300 max-w-xl mx-auto mt-1">Launching will open full-screen presentation mode, reset game state (making all players eligible again), and display the Join QR Code on screen for audience phones.</p>
+            <h2 class="text-2xl font-extrabold text-white mt-2">Ready to Start Fresh CSSO Trivia Game?</h2>
+            <p class="text-sm text-slate-300 max-w-xl mx-auto mt-1">Launching will open presentation mode, clear previous players/scores so everyone starts fresh, and display the Join QR Code on screen.</p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto items-center bg-cssoNavyDark/80 p-5 rounded-xl border border-cssoNavyLight">
@@ -604,12 +604,12 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== DIRECT RAW MP3 AUDIO ENGINE (NO YOUTUBE / ADS) ====================
+    // ==================== DIRECT RAW MP3 AUDIO ENGINE ====================
     let isMuted = false;
     let audioUnlocked = false;
 
-    const QUESTION_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Rob%20Zombie%20-%20The%20Matrix%20Soundtrack%20-%20Dragula%20(Techno%20Remix)(2).mp3';
-    const PODIUM_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Movie%20Soundtracks%20-%20The%20Matrix%20-%20Juno%20Reactor%20vs.%20Don%20Davis%20-%20Navras.mp3';
+    const QUESTION_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Question.mp3';
+    const PODIUM_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Podium.mp3';
 
     const questionAudio = new Audio(QUESTION_AUDIO_URL);
     questionAudio.loop = true;
@@ -627,7 +627,7 @@
       }
     }
 
-    function testYouTubeAudio() {
+    function testAudio() {
       audioUnlocked = true;
       if (isMuted) toggleMusicMute();
       playBassTimerMusic();
@@ -639,7 +639,7 @@
       podiumAudio.pause();
       podiumAudio.currentTime = 0;
       questionAudio.currentTime = 0;
-      questionAudio.play().catch(e => console.error("Audio playback error:", e));
+      questionAudio.play().catch(e => console.error("Question audio playback error:", e));
     }
 
     function playPodiumVictoryMusic() {
@@ -730,7 +730,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v16');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v18');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -748,7 +748,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v16', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v18', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -1058,9 +1058,18 @@
         registeredPlayers = val ? Object.values(val) : [];
         updateLobbyPlayerCounts();
 
-        if (localPlayer && val && val[localPlayer.id]) {
-          localPlayer = val[localPlayer.id];
-          updatePlayerRankBadge();
+        if (localPlayer) {
+          if (val && val[localPlayer.id]) {
+            localPlayer = val[localPlayer.id];
+            updatePlayerRankBadge();
+          } else {
+            localPlayer = null;
+            playerSubmittedChoice = null;
+            const regCard = document.getElementById('playerRegisterCard');
+            const gameCard = document.getElementById('playerGameplayCard');
+            if (regCard) regCard.classList.remove('hidden');
+            if (gameCard) gameCard.classList.add('hidden');
+          }
         }
       });
 
@@ -1123,23 +1132,22 @@
       }
     }
 
+    // COMPLETE LOBBY & PLAYER CLEARING FOR FRESH GAME START
     function launchGameAndReset() {
       stopBassTimerMusic();
 
-      if (registeredPlayers && registeredPlayers.length > 0) {
-        registeredPlayers.forEach(p => {
-          roomRef.child(`players/${p.id}`).update({
-            score: 0,
-            wonIndividual: false
-          });
-        });
-      }
-
-      roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
+      roomRef.child('players').remove();
       roomRef.child('responses').remove();
       roomRef.child('winners').remove();
+      roomRef.child('waves').remove();
+
+      registeredPlayers = [];
+      currentResponses = [];
       roundWinnersLog = [];
       renderWinnersLog();
+      updateLobbyPlayerCounts();
+
+      roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
 
       requestFullScreenMode();
 
@@ -1562,20 +1570,19 @@
     }
     
     function wipeResponsesPrompt() { 
-      if (confirm("Wipe all player response and winner history?")) {
-        if (registeredPlayers && registeredPlayers.length > 0) {
-          registeredPlayers.forEach(p => {
-            roomRef.child(`players/${p.id}`).update({
-              score: 0,
-              wonIndividual: false
-            });
-          });
-        }
+      if (confirm("Wipe all connected players, response history, and winners for a fresh game?")) {
+        roomRef.child('players').remove();
         roomRef.child('responses').remove();
         roomRef.child('winners').remove();
-        roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
+        roomRef.child('waves').remove();
+
+        registeredPlayers = [];
+        currentResponses = [];
         roundWinnersLog = [];
         renderWinnersLog();
+        updateLobbyPlayerCounts();
+
+        roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
       }
     }
 
