@@ -71,7 +71,7 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col pb-28" onclick="unlockAudioContextOnUserGesture()">
+<body class="min-h-screen flex flex-col pb-6" onclick="unlockAudioContextOnUserGesture()">
 
   <!-- OFF-SCREEN YOUTUBE PLAYER CONTAINER -->
   <div style="position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; top: -9999px; left: -9999px;">
@@ -86,12 +86,11 @@
       </div>
       <div>
         <h1 class="text-lg font-bold text-cssoGold leading-none">CSSO Trivia Giveaway</h1>
-        <p class="text-xs text-slate-400">California State Student Organization Event Portal</p>
       </div>
     </div>
 
-    <!-- Mode Switcher -->
-    <div class="flex items-center space-x-2 bg-cssoNavy rounded-lg p-1 border border-cssoNavyLight">
+    <!-- Mode Switcher Nav (Host Button only shown if started on host view) -->
+    <div id="modeSwitcherNav" class="flex items-center space-x-2 bg-cssoNavy rounded-lg p-1 border border-cssoNavyLight">
       <button id="navHostBtn" onclick="switchMainTab('host')" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition">
         <i class="fa-solid fa-desktop mr-1"></i> Stage & Host Panel
       </button>
@@ -102,7 +101,7 @@
   </header>
 
   <!-- MAIN CONTAINER -->
-  <main class="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto relative">
+  <main class="flex-1 p-3 md:p-6 max-w-7xl w-full mx-auto relative flex flex-col justify-center">
 
     <!-- FLOATING PLAYER POP NOTIFICATION OVERLAY -->
     <div id="stageWaveOverlay" class="pointer-events-none fixed top-20 right-6 z-50 flex flex-col space-y-2 items-end"></div>
@@ -414,10 +413,10 @@
     </div>
 
     <!-- ==================== PLAYER SMARTPHONE VIEW ==================== -->
-    <div id="playerViewSection" class="hidden max-w-md mx-auto space-y-6">
+    <div id="playerViewSection" class="hidden max-w-md w-full mx-auto space-y-4">
 
-      <div id="playerRegisterCard" class="bg-cssoNavyDark p-6 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-5">
-        <div class="w-16 h-16 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl font-bold shadow-md">
+      <div id="playerRegisterCard" class="bg-cssoNavyDark p-5 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-4">
+        <div class="w-14 h-14 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl font-bold shadow-md">
           <i class="fa-solid fa-user-astronaut"></i>
         </div>
         <div>
@@ -427,14 +426,14 @@
 
         <div class="space-y-3">
           <input type="text" id="playerNameInput" placeholder="Enter your full name..." class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-sm text-white text-center font-bold focus:border-cssoGold focus:outline-none">
-          <button onclick="registerPlayer()" class="w-full py-3.5 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <button onclick="registerPlayer()" class="w-full py-3 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2">
             <span>Join Game</span> <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
-      <div id="playerGameplayCard" class="hidden bg-cssoNavyDark p-6 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-5">
-        <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
+      <div id="playerGameplayCard" class="hidden bg-cssoNavyDark p-4 sm:p-5 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-3 sm:space-y-4">
+        <div class="flex items-center justify-between border-b border-cssoNavyLight pb-2.5">
           <div>
             <p id="playerBadgeName" class="text-sm font-black text-white">Player</p>
             <p id="playerBadgeId" class="text-[10px] text-cssoGold font-semibold">ID: #00</p>
@@ -445,32 +444,33 @@
           </div>
         </div>
 
-        <div class="bg-cssoNavy p-3 rounded-xl border border-cssoNavyLight flex items-center justify-between">
+        <div class="bg-cssoNavy p-2.5 rounded-xl border border-cssoNavyLight flex items-center justify-between">
           <span class="text-xs text-slate-300 font-medium">Say hi to the stage!</span>
-          <button onclick="sendPlayerWave()" class="px-3.5 py-1.5 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-xs rounded-lg shadow transition transform active:scale-95 flex items-center gap-1.5">
+          <button onclick="sendPlayerWave()" class="px-3 py-1 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-xs rounded-lg shadow transition transform active:scale-95 flex items-center gap-1.5">
             <i class="fa-solid fa-hand-wave"></i> Pop My Name!
           </button>
         </div>
 
-        <div id="playerWaitingScreen" class="py-10 text-center space-y-3">
-          <div class="w-12 h-12 mx-auto rounded-full bg-cssoNavyLight text-cssoGold flex items-center justify-center text-xl animate-spin">
+        <div id="playerWaitingScreen" class="py-8 text-center space-y-3">
+          <div class="w-10 h-10 mx-auto rounded-full bg-cssoNavyLight text-cssoGold flex items-center justify-center text-lg animate-spin">
             <i class="fa-solid fa-spinner"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Waiting for Host...</h3>
+          <h3 class="text-base font-bold text-white">Waiting for Host...</h3>
           <p class="text-xs text-slate-400">You are registered! Questions will appear automatically on your screen.</p>
         </div>
 
-        <div id="playerQuestionScreen" class="hidden space-y-4">
+        <!-- DYNAMIC SCREEN FITTING QUESTION SECTION -->
+        <div id="playerQuestionScreen" class="hidden space-y-3">
           <div class="flex items-center justify-between">
-            <span id="playerQNum" class="text-xs font-bold text-cssoGold uppercase">Question 1</span>
+            <span id="playerQNum" class="text-xs font-bold text-cssoGold uppercase tracking-wider">Question 1</span>
             <span id="playerTimer" class="text-xs font-bold bg-cssoNavy px-2.5 py-1 rounded-full border border-cssoNavyLight text-white">15s</span>
           </div>
 
-          <h3 id="playerQPrompt" class="text-base font-bold text-white leading-snug">Question text...</h3>
-          <div id="playerButtonsGrid" class="grid grid-cols-1 gap-2.5"></div>
+          <h3 id="playerQPrompt" class="text-sm sm:text-base font-bold text-white leading-snug">Question text...</h3>
+          <div id="playerButtonsGrid" class="grid grid-cols-1 gap-2 pt-1"></div>
         </div>
 
-        <div id="playerLockedScreen" class="hidden py-8 text-center space-y-3">
+        <div id="playerLockedScreen" class="hidden py-6 text-center space-y-3">
           <div class="w-12 h-12 mx-auto rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-500 flex items-center justify-center text-xl">
             <i class="fa-solid fa-check"></i>
           </div>
@@ -479,34 +479,34 @@
         </div>
 
         <!-- POST-QUESTION FEEDBACK SCREEN -->
-        <div id="playerFeedbackScreen" class="hidden py-6 text-center space-y-5">
-          <div id="feedbackIconBox" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl shadow-xl">
+        <div id="playerFeedbackScreen" class="hidden py-4 text-center space-y-4">
+          <div id="feedbackIconBox" class="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl shadow-xl">
             <i id="feedbackIcon" class="fa-solid"></i>
           </div>
 
-          <div class="space-y-2">
-            <h3 id="feedbackStatusTitle" class="text-2xl font-black text-white">---</h3>
-            <p id="feedbackKudosText" class="text-sm font-bold text-cssoGold italic px-2">---</p>
+          <div class="space-y-1">
+            <h3 id="feedbackStatusTitle" class="text-xl font-black text-white">---</h3>
+            <p id="feedbackKudosText" class="text-xs font-bold text-cssoGold italic px-2">---</p>
           </div>
 
-          <div class="grid grid-cols-2 gap-3 bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight text-center">
+          <div class="grid grid-cols-2 gap-2 bg-cssoNavy p-3 rounded-xl border border-cssoNavyLight text-center">
             <div>
               <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Your Total Score</p>
-              <p id="feedbackTotalScore" class="text-xl font-black text-emerald-400">0 pts</p>
+              <p id="feedbackTotalScore" class="text-lg font-black text-emerald-400">0 pts</p>
             </div>
             <div>
               <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Overall Standings</p>
-              <p id="feedbackRankDisplay" class="text-xl font-black text-cssoGold">--</p>
+              <p id="feedbackRankDisplay" class="text-lg font-black text-cssoGold">--</p>
             </div>
           </div>
         </div>
 
-        <div id="playerWinCard" class="hidden p-6 rounded-2xl border-2 text-center space-y-4 transition-all">
-          <div id="playerWinIcon" class="w-16 h-16 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-3xl shadow-lg">
+        <div id="playerWinCard" class="hidden p-5 rounded-2xl border-2 text-center space-y-3 transition-all">
+          <div id="playerWinIcon" class="w-14 h-14 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl shadow-lg">
             <i class="fa-solid fa-trophy"></i>
           </div>
           <div>
-            <h3 id="playerWinTitle" class="text-2xl font-black text-white">Winner Announced!</h3>
+            <h3 id="playerWinTitle" class="text-xl font-black text-white">Winner Announced!</h3>
             <p id="playerWinSub" class="text-xs text-slate-300 mt-1">Checking round prize status...</p>
           </div>
         </div>
@@ -610,7 +610,7 @@
     let ytErrorOccurred = false;
     let synthMusicInterval = null;
     let synthAudioCtx = null;
-    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo';
+    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo'; // Requested track for individual question countdowns
     const YOUTUBE_PODIUM_VIDEO_ID = '7s7nnHw1p5g';
 
     function onYouTubeIframeAPIReady() {
@@ -819,9 +819,14 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('join') === 'true') {
+      const isPlayerJoin = urlParams.get('join') === 'true';
+
+      if (isPlayerJoin) {
         isHost = false;
         switchMainTab('player');
+        // Hide Stage & Host Panel button so players only see their game page
+        const navHostBtn = document.getElementById('navHostBtn');
+        if (navHostBtn) navHostBtn.classList.add('hidden');
       }
 
       loadSavedQuestions();
@@ -834,7 +839,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v10');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v11');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -852,7 +857,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v10', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v11', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -1491,9 +1496,9 @@
 
         const grid = document.getElementById('playerButtonsGrid');
         grid.innerHTML = state.options.map((opt, idx) => `
-          <button onclick="submitPlayerAnswer(${idx})" class="w-full p-3.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-3 hover:bg-cssoNavyLight">
-            <span class="w-7 h-7 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black">${String.fromCharCode(65 + idx)}</span>
-            <span>${escapeHtml(opt)}</span>
+          <button onclick="submitPlayerAnswer(${idx})" class="w-full p-2.5 sm:p-3 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-2.5 hover:bg-cssoNavyLight">
+            <span class="w-6 h-6 shrink-0 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black text-xs">${String.fromCharCode(65 + idx)}</span>
+            <span class="leading-snug flex-1">${escapeHtml(opt)}</span>
           </button>
         `).join('');
       } 
@@ -1529,17 +1534,17 @@
         const kudos = document.getElementById('feedbackKudosText');
 
         if (isCorrect) {
-          iconBox.className = "w-16 h-16 mx-auto rounded-full bg-emerald-500 text-cssoNavy flex items-center justify-center text-3xl shadow-xl border-4 border-emerald-300";
-          icon.className = "fa-solid fa-check text-3xl";
+          iconBox.className = "w-14 h-14 mx-auto rounded-full bg-emerald-500 text-cssoNavy flex items-center justify-center text-2xl shadow-xl border-4 border-emerald-300";
+          icon.className = "fa-solid fa-check text-2xl";
           title.textContent = "Spot On! Correct Answer!";
-          title.className = "text-2xl font-black text-emerald-400";
+          title.className = "text-xl font-black text-emerald-400";
           kudos.textContent = correctKudos[Math.floor(Math.random() * correctKudos.length)];
           confetti({ particleCount: 60, spread: 60 });
         } else {
-          iconBox.className = "w-16 h-16 mx-auto rounded-full bg-rose-500 text-white flex items-center justify-center text-3xl shadow-xl border-4 border-rose-300";
-          icon.className = "fa-solid fa-xmark text-3xl";
+          iconBox.className = "w-14 h-14 mx-auto rounded-full bg-rose-500 text-white flex items-center justify-center text-2xl shadow-xl border-4 border-rose-300";
+          icon.className = "fa-solid fa-xmark text-2xl";
           title.textContent = playerSubmittedChoice === null ? "Time Expired!" : "Not Quite Right!";
-          title.className = "text-2xl font-black text-rose-400";
+          title.className = "text-xl font-black text-rose-400";
           kudos.textContent = encouragement[Math.floor(Math.random() * encouragement.length)];
         }
 
@@ -1562,12 +1567,12 @@
         if (state.winnerId === localPlayer.id) {
           winTitle.textContent = "🎉 YOU WON!";
           winSub.textContent = `Congratulations ${localPlayer.name}! You won the prize!`;
-          winCard.className = "p-6 rounded-2xl bg-gradient-to-b from-amber-500 to-cssoNavyDark border-4 border-cssoGold text-center space-y-4 shadow-2xl animate-bounce";
+          winCard.className = "p-5 rounded-2xl bg-gradient-to-b from-amber-500 to-cssoNavyDark border-4 border-cssoGold text-center space-y-3 shadow-2xl animate-bounce";
           confetti({ particleCount: 150, spread: 80 });
         } else {
           winTitle.textContent = "Round Winner Announced";
           winSub.textContent = state.winnerName ? `Winner: ${state.winnerName}` : "No winner awarded.";
-          winCard.className = "p-6 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-4 shadow-2xl";
+          winCard.className = "p-5 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-3 shadow-2xl";
         }
       } 
       else if (state.activeGameState === 'LOBBY') {
@@ -1575,7 +1580,7 @@
         qScrn.classList.add('hidden');
         lockedScrn.classList.add('hidden');
         feedbackScrn.classList.add('hidden');
-        winCard.classList.remove('hidden');
+        winCard.classList.add('hidden');
         waitScrn.classList.remove('hidden');
       }
     }
