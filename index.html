@@ -414,8 +414,8 @@
             <p id="playerBadgeId" class="text-[10px] text-cssoGold font-semibold">ID: #00</p>
           </div>
           <div class="text-right">
-            <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 Correct</p>
-            <p id="playerStatusTag" class="text-[10px] text-emerald-400 font-bold">Firebase Connected</p>
+            <p id="playerScoreDisplay" class="text-xs font-bold text-emerald-400">0 pts</p>
+            <p id="playerRankBadge" class="text-[10px] text-cssoGold font-bold">Unranked</p>
           </div>
         </div>
 
@@ -449,7 +449,30 @@
             <i class="fa-solid fa-check"></i>
           </div>
           <h3 class="text-md font-bold text-white">Response Submitted!</h3>
-          <p class="text-xs text-slate-300">Sit tight. Waiting for time to expire and winner draw.</p>
+          <p class="text-xs text-slate-300">Sit tight. Waiting for answer reveal and leaderboard calculation!</p>
+        </div>
+
+        <!-- POST-QUESTION FEEDBACK SCREEN -->
+        <div id="playerFeedbackScreen" class="hidden py-6 text-center space-y-5">
+          <div id="feedbackIconBox" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl shadow-xl">
+            <i id="feedbackIcon" class="fa-solid"></i>
+          </div>
+
+          <div class="space-y-2">
+            <h3 id="feedbackStatusTitle" class="text-2xl font-black text-white">---</h3>
+            <p id="feedbackKudosText" class="text-sm font-bold text-cssoGold italic px-2">---</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight text-center">
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Your Total Score</p>
+              <p id="feedbackTotalScore" class="text-xl font-black text-emerald-400">0 pts</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Overall Standings</p>
+              <p id="feedbackRankDisplay" class="text-xl font-black text-cssoGold">--</p>
+            </div>
+          </div>
         </div>
 
         <div id="playerWinCard" class="hidden p-6 rounded-2xl border-2 text-center space-y-4 transition-all">
@@ -554,7 +577,7 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== WEB AUDIO SYNTHESIZER (BASS MUSIC) ====================
+    // ==================== WEB AUDIO HIGH-ENERGY SYNTH-WAVE SOUNDTRACK ====================
     let audioCtx = null;
     let isMuted = false;
     let musicInterval = null;
@@ -570,48 +593,71 @@
       stopBassTimerMusic();
 
       let step = 0;
-      const bassNotes = [110, 110, 130.81, 110, 146.83, 130.81, 98, 110];
+      // Upbeat 80s Synth-Wave Melodic & Bass Notes
+      const bassNotes = [110, 110, 130.81, 110, 146.83, 130.81, 164.81, 146.83];
+      const leadNotes = [440, 523.25, 659.25, 523.25, 587.33, 659.25, 783.99, 659.25];
 
       musicInterval = setInterval(() => {
         if (isMuted || !audioCtx) return;
         const now = audioCtx.currentTime;
 
+        // Punchy Synth Bass Kick
         if (step % 2 === 0) {
           const kickOsc = audioCtx.createOscillator();
           const kickGain = audioCtx.createGain();
-          kickOsc.frequency.setValueAtTime(130, now);
-          kickOsc.frequency.exponentialRampToValueAtTime(0.01, now + 0.14);
-          kickGain.gain.setValueAtTime(0.7, now);
-          kickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+          kickOsc.frequency.setValueAtTime(150, now);
+          kickOsc.frequency.exponentialRampToValueAtTime(0.01, now + 0.12);
+          kickGain.gain.setValueAtTime(0.6, now);
+          kickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
           kickOsc.connect(kickGain);
           kickGain.connect(audioCtx.destination);
           kickOsc.start(now);
-          kickOsc.stop(now + 0.14);
+          kickOsc.stop(now + 0.12);
         }
 
+        // Crisp Synth Hi-Hat
+        const hatOsc = audioCtx.createOscillator();
+        const hatGain = audioCtx.createGain();
+        hatOsc.type = 'square';
+        hatOsc.frequency.setValueAtTime(2400, now);
+        hatGain.gain.setValueAtTime(0.08, now);
+        hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        hatOsc.connect(hatGain);
+        hatGain.connect(audioCtx.destination);
+        hatOsc.start(now);
+        hatOsc.stop(now + 0.03);
+
+        // Driving Rolling Synth Bassline
         const bassOsc = audioCtx.createOscillator();
         const bassGain = audioCtx.createGain();
-        const filter = audioCtx.createBiquadFilter();
-
+        const bassFilter = audioCtx.createBiquadFilter();
         bassOsc.type = 'sawtooth';
         bassOsc.frequency.setValueAtTime(bassNotes[step % bassNotes.length], now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(450, now);
-        filter.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-
-        bassGain.gain.setValueAtTime(0.3, now);
-        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-
-        bassOsc.connect(filter);
-        filter.connect(bassGain);
+        bassFilter.type = 'lowpass';
+        bassFilter.frequency.setValueAtTime(600, now);
+        bassFilter.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+        bassGain.gain.setValueAtTime(0.25, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        bassOsc.connect(bassFilter);
+        bassFilter.connect(bassGain);
         bassGain.connect(audioCtx.destination);
-
         bassOsc.start(now);
-        bassOsc.stop(now + 0.22);
+        bassOsc.stop(now + 0.15);
+
+        // Bright Arcade Synth Lead Arpeggio
+        const leadOsc = audioCtx.createOscillator();
+        const leadGain = audioCtx.createGain();
+        leadOsc.type = 'square';
+        leadOsc.frequency.setValueAtTime(leadNotes[step % leadNotes.length], now);
+        leadGain.gain.setValueAtTime(0.12, now);
+        leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        leadOsc.connect(leadGain);
+        leadGain.connect(audioCtx.destination);
+        leadOsc.start(now);
+        leadOsc.stop(now + 0.12);
 
         step++;
-      }, 250);
+      }, 160); // Fast arcade tempo (~185 BPM)
     }
 
     function stopBassTimerMusic() {
@@ -631,7 +677,7 @@
       if (isMuted) stopBassTimerMusic();
     }
 
-    // ==================== DEFAULT 14 QUESTIONS FROM JSON ====================
+    // ==================== DEFAULT 14 SYMPOSIUM QUESTIONS ====================
     const DEFAULT_QUESTIONS = [
       { id: "question_1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Building the Future Together"], correctIndex: 2, timeLimit: 15 },
       { id: "question_2", text: "How many times has the CSSO Association offered the CSSO Academy?", options: ["This was the first time.", "This was the second time.", "This was the third time.", "This was the fourth time."], correctIndex: 0, timeLimit: 15 },
@@ -657,7 +703,10 @@
     let activeGameState = 'LOBBY';
     let stageTimerInterval = null;
     let stageTimeRemaining = 0;
+    let currentQStartTime = Date.now();
+    let currentQTimeLimit = 15;
     let localPlayer = null;
+    let playerSubmittedChoice = null;
     let isHost = true;
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -673,10 +722,10 @@
       initFirebaseSync();
     });
 
-    // ==================== STORAGE & JSON NORMALIZER ====================
+    // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v2');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v6');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -694,7 +743,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v2', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v6', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -703,16 +752,28 @@
     function parseAndNormalizeQuestions(rawData) {
       if (!rawData) return null;
       let list = rawData;
+      
       if (typeof rawData === 'string') {
-        try { list = JSON.parse(rawData); } catch(e) { return null; }
+        let clean = rawData.replace(/^\uFEFF/, '').trim();
+        clean = clean.replace(/,\s*([\]}])/g, '$1');
+        try { 
+          list = JSON.parse(clean); 
+        } catch(e) { 
+          console.error("JSON parse error:", e);
+          return null; 
+        }
       }
+
+      if (!list) return null;
 
       if (!Array.isArray(list)) {
         if (list && Array.isArray(list.questions)) list = list.questions;
+        else if (list && Array.isArray(list.data)) list = list.data;
+        else if (list && Array.isArray(list.items)) list = list.items;
         else return null;
       }
 
-      return list.map((item, idx) => {
+      const normalized = list.map((item, idx) => {
         const textStr = item.text || item.prompt || item.question || `Question ${idx + 1}`;
         
         let opts = [];
@@ -732,12 +793,14 @@
 
         return {
           id: item.id || `q_${Date.now()}_${idx}`,
-          text: textStr,
+          text: String(textStr),
           options: opts,
           correctIndex: cIndex,
           timeLimit: tLimit
         };
       });
+
+      return normalized.length > 0 ? normalized : null;
     }
 
     // ==================== QUESTION BUILDER CRUD ====================
@@ -847,9 +910,7 @@
       window.scrollTo({ top: 100, behavior: 'smooth' });
     }
 
-    function cancelQuestionEdit() {
-      resetForm();
-    }
+    function cancelQuestionEdit() { resetForm(); }
 
     function resetForm() {
       document.getElementById('editQuestionIndex').value = "-1";
@@ -883,7 +944,7 @@
       renderQuestionsList();
     }
 
-    // ==================== JSON IMPORT / EXPORT ====================
+    // ==================== FAIL-SAFE JSON IMPORT / EXPORT ====================
     function exportJSONFile() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
       const downloadAnchor = document.createElement('a');
@@ -900,17 +961,26 @@
 
       const reader = new FileReader();
       reader.onload = function(e) {
-        const normalized = parseAndNormalizeQuestions(e.target.result);
-        if (normalized && normalized.length > 0) {
-          questions = normalized;
-          saveQuestionsToStorage();
-          renderQuestionsList();
-          alert(`Successfully imported ${questions.length} questions!`);
-        } else {
-          alert("Invalid JSON file format. Please make sure it's a valid questions array.");
+        try {
+          const rawText = e.target.result;
+          const normalized = parseAndNormalizeQuestions(rawText);
+          
+          if (normalized && normalized.length > 0) {
+            questions = normalized;
+            saveQuestionsToStorage();
+            renderQuestionsList();
+            alert(`🎉 Successfully loaded ${questions.length} questions from ${file.name}!`);
+          } else {
+            alert(`⚠️ Upload Error: Unable to read valid questions from "${file.name}". Existing questions were kept.`);
+          }
+        } catch (err) {
+          alert(`⚠️ Upload Error: ${err.message}`);
         }
       };
-      reader.readAsText(file);
+      reader.onerror = function() {
+        alert("⚠️ Failed to read the selected file.");
+      };
+      reader.readAsText(file, 'UTF-8');
       event.target.value = '';
     }
 
@@ -919,9 +989,7 @@
       document.getElementById('jsonModal').classList.remove('hidden');
     }
 
-    function closeRawJSONModal() {
-      document.getElementById('jsonModal').classList.add('hidden');
-    }
+    function closeRawJSONModal() { document.getElementById('jsonModal').classList.add('hidden'); }
 
     function copyRawJSONText() {
       const area = document.getElementById('rawJsonTextArea');
@@ -938,9 +1006,9 @@
         saveQuestionsToStorage();
         renderQuestionsList();
         closeRawJSONModal();
-        alert(`Loaded ${questions.length} questions from raw JSON!`);
+        alert(`🎉 Successfully applied ${questions.length} questions!`);
       } else {
-        alert("Failed to parse JSON text.");
+        alert("⚠️ Invalid JSON syntax or empty structure. Existing questions were retained.");
       }
     }
 
@@ -958,6 +1026,11 @@
         const val = snapshot.val();
         registeredPlayers = val ? Object.values(val) : [];
         updateLobbyPlayerCounts();
+
+        if (localPlayer && val && val[localPlayer.id]) {
+          localPlayer = val[localPlayer.id];
+          updatePlayerRankBadge();
+        }
       });
 
       roomRef.child('state').on('value', (snapshot) => {
@@ -966,6 +1039,8 @@
 
         activeGameState = state.activeGameState || 'LOBBY';
         currentQIndex = state.currentQIndex || 0;
+        currentQStartTime = state.startTime || Date.now();
+        currentQTimeLimit = state.timeLimit || 15;
 
         if (!isHost && localPlayer) {
           handlePlayerStateUpdate(state);
@@ -1038,14 +1113,18 @@
       currentQIndex = qIndex;
       currentResponses = [];
       const q = questions[qIndex];
+      const now = Date.now();
+      currentQStartTime = now;
+      currentQTimeLimit = q.timeLimit;
 
       roomRef.child('state').set({
         activeGameState: 'QUESTION',
         currentQIndex: qIndex,
+        correctIndex: q.correctIndex,
         text: q.text,
         options: q.options,
         timeLimit: q.timeLimit,
-        startTime: Date.now()
+        startTime: now
       });
 
       document.getElementById('stageQProgress').textContent = `Question ${qIndex + 1} of ${questions.length}`;
@@ -1081,6 +1160,7 @@
       }, 1000);
     }
 
+    // ==================== CENTISECOND SCORING & EXPIRED STATE ====================
     function handleTimeExpired() {
       stopBassTimerMusic();
       const q = questions[currentQIndex];
@@ -1094,11 +1174,19 @@
       const correctCount = correctResponses.length;
       const correctPct = totalResponses > 0 ? Math.round((correctCount / totalResponses) * 100) : 0;
 
+      // Award Points Based on Centiseconds Remaining
       correctResponses.forEach(r => {
+        let pts = r.centisecondsRemaining;
+        if (pts === undefined || pts === null) {
+          const elapsedMs = (r.timestamp || Date.now()) - currentQStartTime;
+          const remainingMs = Math.max(0, (q.timeLimit * 1000) - elapsedMs);
+          pts = Math.floor(remainingMs / 10);
+        }
+
         const pRef = roomRef.child(`players/${r.playerId}`);
         pRef.transaction(player => {
           if (player) {
-            player.score = (player.score || 0) + 1;
+            player.score = (player.score || 0) + pts;
           }
           return player;
         });
@@ -1110,11 +1198,14 @@
       document.getElementById('barCorrect').style.width = `${correctPct}%`;
       document.getElementById('barIncorrect').style.width = `${100 - correctPct}%`;
 
-      roomRef.child('state/activeGameState').set('EXPIRED');
+      roomRef.child('state').update({
+        activeGameState: 'EXPIRED',
+        correctIndex: q.correctIndex
+      });
 
       setTimeout(() => {
         spinPrizeRandomizer();
-      }, 3500);
+      }, 4000);
     }
 
     function spinPrizeRandomizer() {
@@ -1198,35 +1289,51 @@
       const pId = `p_${Date.now()}_${Math.floor(Math.random()*100)}`;
 
       localPlayer = { id: pId, name: name, score: 0, wonIndividual: false };
+      playerSubmittedChoice = null;
+
       roomRef.child(`players/${pId}`).set(localPlayer);
 
       document.getElementById('playerRegisterCard').classList.add('hidden');
       document.getElementById('playerGameplayCard').classList.remove('hidden');
       document.getElementById('playerBadgeName').textContent = localPlayer.name;
       document.getElementById('playerBadgeId').textContent = `ID: #${pId.slice(-4)}`;
+      updatePlayerRankBadge();
     }
 
     function submitPlayerAnswer(choiceIdx) {
       if (!localPlayer) return;
+      playerSubmittedChoice = choiceIdx;
+
+      const now = Date.now();
+      const elapsedMs = now - currentQStartTime;
+      const totalMs = (currentQTimeLimit || 15) * 1000;
+      const remainingMs = Math.max(0, totalMs - elapsedMs);
+      const csRemaining = Math.floor(remainingMs / 10);
+
       roomRef.child(`responses/${currentQIndex}/${localPlayer.id}`).set({
         playerId: localPlayer.id,
         choiceIndex: choiceIdx,
-        timestamp: Date.now()
+        centisecondsRemaining: csRemaining,
+        timestamp: now
       });
 
       document.getElementById('playerQuestionScreen').classList.add('hidden');
       document.getElementById('playerLockedScreen').classList.remove('hidden');
     }
 
+    // ==================== DYNAMIC KUDOS & ENCOURAGEMENT GENERATOR ====================
     function handlePlayerStateUpdate(state) {
       const waitScrn = document.getElementById('playerWaitingScreen');
       const qScrn = document.getElementById('playerQuestionScreen');
       const lockedScrn = document.getElementById('playerLockedScreen');
+      const feedbackScrn = document.getElementById('playerFeedbackScreen');
       const winCard = document.getElementById('playerWinCard');
 
       if (state.activeGameState === 'QUESTION') {
+        playerSubmittedChoice = null;
         waitScrn.classList.add('hidden');
         lockedScrn.classList.add('hidden');
+        feedbackScrn.classList.add('hidden');
         winCard.classList.add('hidden');
         qScrn.classList.remove('hidden');
 
@@ -1241,10 +1348,64 @@
             <span>${escapeHtml(opt)}</span>
           </button>
         `).join('');
-      } else if (state.activeGameState === 'WINNER') {
+      } 
+      else if (state.activeGameState === 'EXPIRED') {
         qScrn.classList.add('hidden');
         lockedScrn.classList.add('hidden');
         waitScrn.classList.add('hidden');
+        winCard.classList.add('hidden');
+        feedbackScrn.classList.remove('hidden');
+
+        const isCorrect = (playerSubmittedChoice !== null && playerSubmittedChoice === state.correctIndex);
+        const name = localPlayer ? localPlayer.name : "Player";
+
+        const correctKudos = [
+          `Amazing! You must know everything!`,
+          `Check out the big brain on ${name}!`,
+          `Another example of ${name} being brilliant.`,
+          `Pure genius, ${name}! Speed + accuracy on point!`,
+          `Flex those trivia muscles, ${name}! Masterclass move!`
+        ];
+
+        const encouragement = [
+          `So close - you got the next one!`,
+          `I hit the wrong key sometimes, too.`,
+          `Shake it off ${name}, your comeback starts next round!`,
+          `A temporary bump on your road to glory.`,
+          `Keep your head up ${name}, speed round ahead!`
+        ];
+
+        const iconBox = document.getElementById('feedbackIconBox');
+        const icon = document.getElementById('feedbackIcon');
+        const title = document.getElementById('feedbackStatusTitle');
+        const kudos = document.getElementById('feedbackKudosText');
+
+        if (isCorrect) {
+          iconBox.className = "w-16 h-16 mx-auto rounded-full bg-emerald-500 text-cssoNavy flex items-center justify-center text-3xl shadow-xl border-4 border-emerald-300";
+          icon.className = "fa-solid fa-check text-3xl";
+          title.textContent = "Spot On! Correct Answer!";
+          title.className = "text-2xl font-black text-emerald-400";
+          kudos.textContent = correctKudos[Math.floor(Math.random() * correctKudos.length)];
+          confetti({ particleCount: 60, spread: 60 });
+        } else {
+          iconBox.className = "w-16 h-16 mx-auto rounded-full bg-rose-500 text-white flex items-center justify-center text-3xl shadow-xl border-4 border-rose-300";
+          icon.className = "fa-solid fa-xmark text-3xl";
+          title.textContent = playerSubmittedChoice === null ? "Time Expired!" : "Not Quite Right!";
+          title.className = "text-2xl font-black text-rose-400";
+          kudos.textContent = encouragement[Math.floor(Math.random() * encouragement.length)];
+        }
+
+        const score = localPlayer ? (localPlayer.score || 0) : 0;
+        document.getElementById('feedbackTotalScore').textContent = `${score.toLocaleString()} pts`;
+
+        const rankInfo = getPlayerOverallRank();
+        document.getElementById('feedbackRankDisplay').textContent = rankInfo;
+      }
+      else if (state.activeGameState === 'WINNER') {
+        qScrn.classList.add('hidden');
+        lockedScrn.classList.add('hidden');
+        waitScrn.classList.add('hidden');
+        feedbackScrn.classList.add('hidden');
         winCard.classList.remove('hidden');
 
         const winTitle = document.getElementById('playerWinTitle');
@@ -1260,11 +1421,42 @@
           winSub.textContent = state.winnerName ? `Winner: ${state.winnerName}` : "No winner awarded.";
           winCard.className = "p-6 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-4 shadow-2xl";
         }
-      } else if (state.activeGameState === 'LOBBY') {
+      } 
+      else if (state.activeGameState === 'LOBBY') {
+        playerSubmittedChoice = null;
         qScrn.classList.add('hidden');
         lockedScrn.classList.add('hidden');
+        feedbackScrn.classList.add('hidden');
         winCard.classList.add('hidden');
         waitScrn.classList.remove('hidden');
+      }
+    }
+
+    function getPlayerOverallRank() {
+      if (!localPlayer || registeredPlayers.length === 0) return "--";
+      const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0));
+      const rankIdx = sorted.findIndex(p => p.id === localPlayer.id);
+      if (rankIdx === -1) return "--";
+
+      const rank = rankIdx + 1;
+      const total = sorted.length;
+      return `${getOrdinal(rank)} Place (${total})`;
+    }
+
+    function getOrdinal(n) {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function updatePlayerRankBadge() {
+      const rankTag = document.getElementById('playerRankBadge');
+      const scoreEl = document.getElementById('playerScoreDisplay');
+      if (scoreEl && localPlayer) {
+        scoreEl.textContent = `${(localPlayer.score || 0).toLocaleString()} pts`;
+      }
+      if (rankTag) {
+        rankTag.textContent = getPlayerOverallRank();
       }
     }
 
@@ -1300,11 +1492,11 @@
       stopBassTimerMusic();
       const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0));
       document.getElementById('podium1Name').textContent = sorted[0] ? sorted[0].name : '---';
-      document.getElementById('podium1Score').textContent = `${sorted[0] ? sorted[0].score : 0} Correct`;
+      document.getElementById('podium1Score').textContent = `${(sorted[0] ? sorted[0].score : 0).toLocaleString()} pts`;
       document.getElementById('podium2Name').textContent = sorted[1] ? sorted[1].name : '---';
-      document.getElementById('podium2Score').textContent = `${sorted[1] ? sorted[1].score : 0} Correct`;
+      document.getElementById('podium2Score').textContent = `${(sorted[1] ? sorted[1].score : 0).toLocaleString()} pts`;
       document.getElementById('podium3Name').textContent = sorted[2] ? sorted[2].name : '---';
-      document.getElementById('podium3Score').textContent = `${sorted[2] ? sorted[2].score : 0} Correct`;
+      document.getElementById('podium3Score').textContent = `${(sorted[2] ? sorted[2].score : 0).toLocaleString()} pts`;
       document.getElementById('podiumModal').classList.remove('hidden');
       confetti({ particleCount: 150, spread: 90 });
     }
