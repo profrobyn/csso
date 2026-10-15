@@ -21,9 +21,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
-  <!-- YOUTUBE IFRAME PLAYER API -->
-  <script src="https://www.youtube.com/iframe_api"></script>
-
   <script>
     tailwind.config = {
       theme: {
@@ -59,6 +56,13 @@
     .podium-second { height: 130px; background: linear-gradient(180deg, #94a3b8 0%, #475569 100%); }
     .podium-third { height: 100px; background: linear-gradient(180deg, #d97706 0%, #78350f 100%); }
 
+    /* Forced 2-Column Grid for Player Options */
+    .player-answers-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 0.5rem !important;
+    }
+
     /* Floating Wave Pop Animation */
     @keyframes floatPop {
       0% { transform: translateY(20px) scale(0.8); opacity: 0; }
@@ -73,11 +77,6 @@
 </head>
 <body class="min-h-screen flex flex-col pb-6" onclick="unlockAudioContextOnUserGesture()">
 
-  <!-- OFF-SCREEN YOUTUBE PLAYER CONTAINER -->
-  <div style="position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; top: -9999px; left: -9999px;">
-    <div id="youtubeAudioPlayer"></div>
-  </div>
-
   <!-- TOP APP BAR -->
   <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-4 py-3 sticky top-0 z-40 flex items-center justify-between shadow-lg">
     <div class="flex items-center space-x-3">
@@ -89,7 +88,7 @@
       </div>
     </div>
 
-    <!-- Mode Switcher Nav (Host Button only shown if started on host view) -->
+    <!-- Mode Switcher Nav -->
     <div id="modeSwitcherNav" class="flex items-center space-x-2 bg-cssoNavy rounded-lg p-1 border border-cssoNavyLight">
       <button id="navHostBtn" onclick="switchMainTab('host')" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition">
         <i class="fa-solid fa-desktop mr-1"></i> Stage & Host Panel
@@ -421,11 +420,11 @@
         </div>
         <div>
           <h2 class="text-xl font-extrabold text-white">Join CSSO Trivia</h2>
-          <p class="text-xs text-slate-300 mt-1">Enter your name to participate in live giveaway rounds!</p>
+          <p class="text-xs text-slate-300 mt-1">Please enter your name to join the game.</p>
         </div>
 
         <div class="space-y-3">
-          <input type="text" id="playerNameInput" placeholder="Enter your full name..." class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-sm text-white text-center font-bold focus:border-cssoGold focus:outline-none">
+          <input type="text" id="playerNameInput" placeholder="Enter your full name..." class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-sm text-white text-center font-bold focus:border-cssoGold focus:outline-none" required>
           <button onclick="registerPlayer()" class="w-full py-3 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2">
             <span>Join Game</span> <i class="fa-solid fa-arrow-right"></i>
           </button>
@@ -468,8 +467,8 @@
 
           <h3 id="playerQPrompt" class="text-xs sm:text-sm font-bold text-white leading-snug">Question text...</h3>
           
-          <!-- 2 COLUMNS FOR OPTIONS A, B, C, D -->
-          <div id="playerButtonsGrid" class="grid grid-cols-2 gap-2 pt-1"></div>
+          <!-- EXPLICIT 2-COLUMN GRID FOR OPTIONS A, B, C, D -->
+          <div id="playerButtonsGrid" class="player-answers-grid pt-1"></div>
         </div>
 
         <div id="playerLockedScreen" class="hidden py-6 text-center space-y-3">
@@ -605,46 +604,26 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== YOUTUBE AUDIO PLAYER (STRICT NO-FALLBACK) ====================
-    let ytPlayer = null;
+    // ==================== DIRECT RAW MP3 AUDIO ENGINE (NO YOUTUBE / ADS) ====================
     let isMuted = false;
     let audioUnlocked = false;
 
-    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo';
-    const YOUTUBE_PODIUM_VIDEO_ID = '7s7nnHw1p5g';
+    const QUESTION_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Rob%20Zombie%20-%20The%20Matrix%20Soundtrack%20-%20Dragula%20(Techno%20Remix)(2).mp3';
+    const PODIUM_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Movie%20Soundtracks%20-%20The%20Matrix%20-%20Juno%20Reactor%20vs.%20Don%20Davis%20-%20Navras.mp3';
 
-    function onYouTubeIframeAPIReady() {
-      ytPlayer = new YT.Player('youtubeAudioPlayer', {
-        height: '200',
-        width: '200',
-        videoId: YOUTUBE_TIMER_VIDEO_ID,
-        playerVars: {
-          'autoplay': 0,
-          'controls': 0,
-          'loop': 1,
-          'playlist': YOUTUBE_TIMER_VIDEO_ID,
-          'enablejsapi': 1,
-          'playsinline': 1
-        },
-        events: {
-          'onReady': onPlayerReady
-        }
-      });
-    }
+    const questionAudio = new Audio(QUESTION_AUDIO_URL);
+    questionAudio.loop = true;
 
-    function onPlayerReady(event) {
-      // Ready for user playback
-    }
+    const podiumAudio = new Audio(PODIUM_AUDIO_URL);
+    podiumAudio.loop = true;
 
     function unlockAudioContextOnUserGesture() {
       if (!audioUnlocked) {
         audioUnlocked = true;
-        if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
-          try {
-            ytPlayer.playVideo();
-            setTimeout(() => { ytPlayer.pauseVideo(); }, 200);
-          } catch(e) {}
-        }
+        questionAudio.play().then(() => {
+          questionAudio.pause();
+          questionAudio.currentTime = 0;
+        }).catch(() => {});
       }
     }
 
@@ -657,38 +636,23 @@
 
     function playBassTimerMusic() {
       if (isMuted) return;
-
-      if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
-        try {
-          if (typeof ytPlayer.getVideoData === 'function' && ytPlayer.getVideoData().video_id !== YOUTUBE_TIMER_VIDEO_ID) {
-            ytPlayer.loadVideoById(YOUTUBE_TIMER_VIDEO_ID);
-          } else {
-            ytPlayer.seekTo(0);
-          }
-          ytPlayer.playVideo();
-        } catch(e) {
-          console.error("YouTube Play error:", e);
-        }
-      }
+      podiumAudio.pause();
+      podiumAudio.currentTime = 0;
+      questionAudio.currentTime = 0;
+      questionAudio.play().catch(e => console.error("Audio playback error:", e));
     }
 
     function playPodiumVictoryMusic() {
       if (isMuted) return;
-
-      if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
-        try {
-          ytPlayer.loadVideoById(YOUTUBE_PODIUM_VIDEO_ID);
-          ytPlayer.playVideo();
-        } catch(e) {
-          console.error("YouTube Podium Play error:", e);
-        }
-      }
+      questionAudio.pause();
+      questionAudio.currentTime = 0;
+      podiumAudio.currentTime = 0;
+      podiumAudio.play().catch(e => console.error("Podium audio playback error:", e));
     }
 
     function stopBassTimerMusic() {
-      if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
-        try { ytPlayer.pauseVideo(); } catch(e){}
-      }
+      questionAudio.pause();
+      podiumAudio.pause();
     }
 
     function toggleMusicMute() {
@@ -766,7 +730,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v14');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v16');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -784,7 +748,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v14', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v16', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -1364,10 +1328,18 @@
       }
     }
 
+    // STRICT NAME REQUIREMENT ON REGISTER
     function registerPlayer() {
-      let name = document.getElementById('playerNameInput').value.trim() || `Guest #${Math.floor(1000 + Math.random() * 9000)}`;
-      const pId = `p_${Date.now()}_${Math.floor(Math.random()*100)}`;
+      const nameInput = document.getElementById('playerNameInput');
+      const name = nameInput ? nameInput.value.trim() : '';
 
+      if (!name) {
+        alert("Please enter your name before joining!");
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      const pId = `p_${Date.now()}_${Math.floor(Math.random()*100)}`;
       localPlayer = { id: pId, name: name, score: 0, wonIndividual: false };
       playerSubmittedChoice = null;
 
@@ -1422,7 +1394,7 @@
         document.getElementById('playerTimer').textContent = `${state.timeLimit}s`;
 
         const grid = document.getElementById('playerButtonsGrid');
-        grid.className = "grid grid-cols-2 gap-2 pt-1";
+        grid.className = "player-answers-grid pt-1";
         grid.innerHTML = state.options.map((opt, idx) => `
           <button onclick="submitPlayerAnswer(${idx})" class="w-full p-2.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-2 hover:bg-cssoNavyLight min-h-[50px]">
             <span class="w-5 h-5 shrink-0 rounded bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black text-[11px]">${String.fromCharCode(65 + idx)}</span>
