@@ -124,7 +124,7 @@
 
         <div class="flex items-center space-x-3">
           <button onclick="testYouTubeAudio()" class="px-3 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition">
-            <i class="fa-solid fa-music mr-1"></i> Test Countdown Song
+            <i class="fa-solid fa-music mr-1"></i> Test Song
           </button>
           <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs">
             <i class="fa-solid fa-volume-high mr-1"></i> Music On
@@ -413,7 +413,7 @@
     </div>
 
     <!-- ==================== PLAYER SMARTPHONE VIEW ==================== -->
-    <div id="playerViewSection" class="hidden max-w-md w-full mx-auto space-y-4">
+    <div id="playerViewSection" class="hidden max-w-md w-full mx-auto space-y-3">
 
       <div id="playerRegisterCard" class="bg-cssoNavyDark p-5 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-4">
         <div class="w-14 h-14 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl font-bold shadow-md">
@@ -432,8 +432,8 @@
         </div>
       </div>
 
-      <div id="playerGameplayCard" class="hidden bg-cssoNavyDark p-4 sm:p-5 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-3 sm:space-y-4">
-        <div class="flex items-center justify-between border-b border-cssoNavyLight pb-2.5">
+      <div id="playerGameplayCard" class="hidden bg-cssoNavyDark p-3.5 sm:p-4 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-3">
+        <div class="flex items-center justify-between border-b border-cssoNavyLight pb-2">
           <div>
             <p id="playerBadgeName" class="text-sm font-black text-white">Player</p>
             <p id="playerBadgeId" class="text-[10px] text-cssoGold font-semibold">ID: #00</p>
@@ -444,9 +444,9 @@
           </div>
         </div>
 
-        <div class="bg-cssoNavy p-2.5 rounded-xl border border-cssoNavyLight flex items-center justify-between">
+        <div class="bg-cssoNavy p-2 rounded-xl border border-cssoNavyLight flex items-center justify-between">
           <span class="text-xs text-slate-300 font-medium">Say hi to the stage!</span>
-          <button onclick="sendPlayerWave()" class="px-3 py-1 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-xs rounded-lg shadow transition transform active:scale-95 flex items-center gap-1.5">
+          <button onclick="sendPlayerWave()" class="px-2.5 py-1 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-xs rounded-lg shadow transition transform active:scale-95 flex items-center gap-1">
             <i class="fa-solid fa-hand-wave"></i> Pop My Name!
           </button>
         </div>
@@ -459,15 +459,17 @@
           <p class="text-xs text-slate-400">You are registered! Questions will appear automatically on your screen.</p>
         </div>
 
-        <!-- DYNAMIC SCREEN FITTING QUESTION SECTION -->
-        <div id="playerQuestionScreen" class="hidden space-y-3">
+        <!-- TWO-COLUMN PLAYER QUESTION LAYOUT -->
+        <div id="playerQuestionScreen" class="hidden space-y-2.5">
           <div class="flex items-center justify-between">
             <span id="playerQNum" class="text-xs font-bold text-cssoGold uppercase tracking-wider">Question 1</span>
             <span id="playerTimer" class="text-xs font-bold bg-cssoNavy px-2.5 py-1 rounded-full border border-cssoNavyLight text-white">15s</span>
           </div>
 
-          <h3 id="playerQPrompt" class="text-sm sm:text-base font-bold text-white leading-snug">Question text...</h3>
-          <div id="playerButtonsGrid" class="grid grid-cols-1 gap-2 pt-1"></div>
+          <h3 id="playerQPrompt" class="text-xs sm:text-sm font-bold text-white leading-snug">Question text...</h3>
+          
+          <!-- 2 COLUMNS FOR OPTIONS A, B, C, D -->
+          <div id="playerButtonsGrid" class="grid grid-cols-2 gap-2 pt-1"></div>
         </div>
 
         <div id="playerLockedScreen" class="hidden py-6 text-center space-y-3">
@@ -479,34 +481,34 @@
         </div>
 
         <!-- POST-QUESTION FEEDBACK SCREEN -->
-        <div id="playerFeedbackScreen" class="hidden py-4 text-center space-y-4">
-          <div id="feedbackIconBox" class="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl shadow-xl">
+        <div id="playerFeedbackScreen" class="hidden py-4 text-center space-y-3">
+          <div id="feedbackIconBox" class="w-12 h-12 mx-auto rounded-full flex items-center justify-center text-xl shadow-xl">
             <i id="feedbackIcon" class="fa-solid"></i>
           </div>
 
           <div class="space-y-1">
-            <h3 id="feedbackStatusTitle" class="text-xl font-black text-white">---</h3>
+            <h3 id="feedbackStatusTitle" class="text-lg font-black text-white">---</h3>
             <p id="feedbackKudosText" class="text-xs font-bold text-cssoGold italic px-2">---</p>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 bg-cssoNavy p-3 rounded-xl border border-cssoNavyLight text-center">
+          <div class="grid grid-cols-2 gap-2 bg-cssoNavy p-2.5 rounded-xl border border-cssoNavyLight text-center">
             <div>
               <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Your Total Score</p>
-              <p id="feedbackTotalScore" class="text-lg font-black text-emerald-400">0 pts</p>
+              <p id="feedbackTotalScore" class="text-base font-black text-emerald-400">0 pts</p>
             </div>
             <div>
               <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Overall Standings</p>
-              <p id="feedbackRankDisplay" class="text-lg font-black text-cssoGold">--</p>
+              <p id="feedbackRankDisplay" class="text-base font-black text-cssoGold">--</p>
             </div>
           </div>
         </div>
 
-        <div id="playerWinCard" class="hidden p-5 rounded-2xl border-2 text-center space-y-3 transition-all">
-          <div id="playerWinIcon" class="w-14 h-14 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl shadow-lg">
+        <div id="playerWinCard" class="hidden p-4 rounded-2xl border-2 text-center space-y-3 transition-all">
+          <div id="playerWinIcon" class="w-12 h-12 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl shadow-lg">
             <i class="fa-solid fa-trophy"></i>
           </div>
           <div>
-            <h3 id="playerWinTitle" class="text-xl font-black text-white">Winner Announced!</h3>
+            <h3 id="playerWinTitle" class="text-lg font-black text-white">Winner Announced!</h3>
             <p id="playerWinSub" class="text-xs text-slate-300 mt-1">Checking round prize status...</p>
           </div>
         </div>
@@ -603,14 +605,12 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== YOUTUBE AUDIO PLAYER + FALLBACK SYNTH ENGINE ====================
+    // ==================== YOUTUBE AUDIO PLAYER (STRICT NO-FALLBACK) ====================
     let ytPlayer = null;
     let isMuted = false;
     let audioUnlocked = false;
-    let ytErrorOccurred = false;
-    let synthMusicInterval = null;
-    let synthAudioCtx = null;
-    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo'; // Restored dramatic music track for individual questions
+
+    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo';
     const YOUTUBE_PODIUM_VIDEO_ID = '7s7nnHw1p5g';
 
     function onYouTubeIframeAPIReady() {
@@ -624,31 +624,25 @@
           'loop': 1,
           'playlist': YOUTUBE_TIMER_VIDEO_ID,
           'enablejsapi': 1,
-          'origin': window.location.origin
+          'playsinline': 1
         },
         events: {
-          'onReady': onPlayerReady,
-          'onError': onPlayerError
+          'onReady': onPlayerReady
         }
       });
     }
 
     function onPlayerReady(event) {
-      ytErrorOccurred = false;
-    }
-
-    function onPlayerError(event) {
-      console.warn("YouTube Player embedding blocked (Error code " + event.data + "). Activating Web Audio Synth fallback.");
-      ytErrorOccurred = true;
+      // Ready for user playback
     }
 
     function unlockAudioContextOnUserGesture() {
       if (!audioUnlocked) {
         audioUnlocked = true;
-        if (ytPlayer && typeof ytPlayer.playVideo === 'function' && !ytErrorOccurred) {
+        if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
           try {
             ytPlayer.playVideo();
-            setTimeout(() => { ytPlayer.pauseVideo(); }, 150);
+            setTimeout(() => { ytPlayer.pauseVideo(); }, 200);
           } catch(e) {}
         }
       }
@@ -664,7 +658,7 @@
     function playBassTimerMusic() {
       if (isMuted) return;
 
-      if (ytPlayer && typeof ytPlayer.playVideo === 'function' && !ytErrorOccurred) {
+      if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
         try {
           if (typeof ytPlayer.getVideoData === 'function' && ytPlayer.getVideoData().video_id !== YOUTUBE_TIMER_VIDEO_ID) {
             ytPlayer.loadVideoById(YOUTUBE_TIMER_VIDEO_ID);
@@ -672,98 +666,28 @@
             ytPlayer.seekTo(0);
           }
           ytPlayer.playVideo();
-          return;
         } catch(e) {
-          console.warn("YouTube play attempt failed, using synth fallback.");
+          console.error("YouTube Play error:", e);
         }
       }
-
-      playSynthFallbackMusic();
     }
 
     function playPodiumVictoryMusic() {
       if (isMuted) return;
 
-      if (ytPlayer && typeof ytPlayer.loadVideoById === 'function' && !ytErrorOccurred) {
+      if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
         try {
           ytPlayer.loadVideoById(YOUTUBE_PODIUM_VIDEO_ID);
           ytPlayer.playVideo();
-          return;
         } catch(e) {
-          console.warn("YouTube podium song play attempt failed, using synth fallback.");
+          console.error("YouTube Podium Play error:", e);
         }
       }
-
-      playSynthFallbackMusic();
     }
 
     function stopBassTimerMusic() {
       if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
         try { ytPlayer.pauseVideo(); } catch(e){}
-      }
-      stopSynthFallbackMusic();
-    }
-
-    function playSynthFallbackMusic() {
-      stopSynthFallbackMusic();
-      if (!synthAudioCtx) {
-        synthAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (synthAudioCtx.state === 'suspended') {
-        synthAudioCtx.resume();
-      }
-
-      let step = 0;
-      const bassNotes = [110, 110, 130.81, 110, 146.83, 130.81, 164.81, 146.83];
-      const leadNotes = [440, 523.25, 659.25, 523.25, 587.33, 659.25, 783.99, 659.25];
-
-      synthMusicInterval = setInterval(() => {
-        if (isMuted || !synthAudioCtx) return;
-        const now = synthAudioCtx.currentTime;
-
-        if (step % 2 === 0) {
-          const kickOsc = synthAudioCtx.createOscillator();
-          const kickGain = synthAudioCtx.createGain();
-          kickOsc.frequency.setValueAtTime(150, now);
-          kickOsc.frequency.exponentialRampToValueAtTime(0.01, now + 0.12);
-          kickGain.gain.setValueAtTime(0.5, now);
-          kickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-          kickOsc.connect(kickGain);
-          kickGain.connect(synthAudioCtx.destination);
-          kickOsc.start(now);
-          kickOsc.stop(now + 0.12);
-        }
-
-        const bassOsc = synthAudioCtx.createOscillator();
-        const bassGain = synthAudioCtx.createGain();
-        bassOsc.type = 'sawtooth';
-        bassOsc.frequency.setValueAtTime(bassNotes[step % bassNotes.length], now);
-        bassGain.gain.setValueAtTime(0.2, now);
-        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        bassOsc.connect(bassGain);
-        bassGain.connect(synthAudioCtx.destination);
-        bassOsc.start(now);
-        bassOsc.stop(now + 0.15);
-
-        const leadOsc = synthAudioCtx.createOscillator();
-        const leadGain = synthAudioCtx.createGain();
-        leadOsc.type = 'square';
-        leadOsc.frequency.setValueAtTime(leadNotes[step % leadNotes.length], now);
-        leadGain.gain.setValueAtTime(0.1, now);
-        leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        leadOsc.connect(leadGain);
-        leadGain.connect(synthAudioCtx.destination);
-        leadOsc.start(now);
-        leadOsc.stop(now + 0.12);
-
-        step++;
-      }, 160);
-    }
-
-    function stopSynthFallbackMusic() {
-      if (synthMusicInterval) {
-        clearInterval(synthMusicInterval);
-        synthMusicInterval = null;
       }
     }
 
@@ -842,7 +766,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v12');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v14');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -860,7 +784,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v12', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v14', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -1498,10 +1422,11 @@
         document.getElementById('playerTimer').textContent = `${state.timeLimit}s`;
 
         const grid = document.getElementById('playerButtonsGrid');
+        grid.className = "grid grid-cols-2 gap-2 pt-1";
         grid.innerHTML = state.options.map((opt, idx) => `
-          <button onclick="submitPlayerAnswer(${idx})" class="w-full p-2.5 sm:p-3 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-2.5 hover:bg-cssoNavyLight">
-            <span class="w-6 h-6 shrink-0 rounded-lg bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black text-xs">${String.fromCharCode(65 + idx)}</span>
-            <span class="leading-snug flex-1">${escapeHtml(opt)}</span>
+          <button onclick="submitPlayerAnswer(${idx})" class="w-full p-2.5 rounded-xl bg-cssoNavy border border-cssoNavyLight hover:border-cssoGold text-left text-xs font-bold text-white transition flex items-center space-x-2 hover:bg-cssoNavyLight min-h-[50px]">
+            <span class="w-5 h-5 shrink-0 rounded bg-cssoNavyLight text-cssoGold flex items-center justify-center font-black text-[11px]">${String.fromCharCode(65 + idx)}</span>
+            <span class="leading-tight flex-1 text-[11px] sm:text-xs">${escapeHtml(opt)}</span>
           </button>
         `).join('');
       } 
@@ -1537,17 +1462,17 @@
         const kudos = document.getElementById('feedbackKudosText');
 
         if (isCorrect) {
-          iconBox.className = "w-14 h-14 mx-auto rounded-full bg-emerald-500 text-cssoNavy flex items-center justify-center text-2xl shadow-xl border-4 border-emerald-300";
-          icon.className = "fa-solid fa-check text-2xl";
+          iconBox.className = "w-12 h-12 mx-auto rounded-full bg-emerald-500 text-cssoNavy flex items-center justify-center text-xl shadow-xl border-4 border-emerald-300";
+          icon.className = "fa-solid fa-check text-xl";
           title.textContent = "Spot On! Correct Answer!";
-          title.className = "text-xl font-black text-emerald-400";
+          title.className = "text-lg font-black text-emerald-400";
           kudos.textContent = correctKudos[Math.floor(Math.random() * correctKudos.length)];
           confetti({ particleCount: 60, spread: 60 });
         } else {
-          iconBox.className = "w-14 h-14 mx-auto rounded-full bg-rose-500 text-white flex items-center justify-center text-2xl shadow-xl border-4 border-rose-300";
-          icon.className = "fa-solid fa-xmark text-2xl";
+          iconBox.className = "w-12 h-12 mx-auto rounded-full bg-rose-500 text-white flex items-center justify-center text-xl shadow-xl border-4 border-rose-300";
+          icon.className = "fa-solid fa-xmark text-xl";
           title.textContent = playerSubmittedChoice === null ? "Time Expired!" : "Not Quite Right!";
-          title.className = "text-xl font-black text-rose-400";
+          title.className = "text-lg font-black text-rose-400";
           kudos.textContent = encouragement[Math.floor(Math.random() * encouragement.length)];
         }
 
@@ -1570,12 +1495,12 @@
         if (state.winnerId === localPlayer.id) {
           winTitle.textContent = "🎉 YOU WON!";
           winSub.textContent = `Congratulations ${localPlayer.name}! You won the prize!`;
-          winCard.className = "p-5 rounded-2xl bg-gradient-to-b from-amber-500 to-cssoNavyDark border-4 border-cssoGold text-center space-y-3 shadow-2xl animate-bounce";
+          winCard.className = "p-4 rounded-2xl bg-gradient-to-b from-amber-500 to-cssoNavyDark border-4 border-cssoGold text-center space-y-3 shadow-2xl animate-bounce";
           confetti({ particleCount: 150, spread: 80 });
         } else {
           winTitle.textContent = "Round Winner Announced";
           winSub.textContent = state.winnerName ? `Winner: ${state.winnerName}` : "No winner awarded.";
-          winCard.className = "p-5 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-3 shadow-2xl";
+          winCard.className = "p-4 rounded-2xl bg-cssoNavyDark border border-cssoNavyLight text-center space-y-3 shadow-2xl";
         }
       } 
       else if (state.activeGameState === 'LOBBY') {
