@@ -73,7 +73,7 @@
 </head>
 <body class="min-h-screen flex flex-col pb-28" onclick="unlockAudioContextOnUserGesture()">
 
-  <!-- OFF-SCREEN YOUTUBE PLAYER CONTAINER (Not display:none so browser allows iframe DOM layout) -->
+  <!-- OFF-SCREEN YOUTUBE PLAYER CONTAINER -->
   <div style="position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; top: -9999px; left: -9999px;">
     <div id="youtubeAudioPlayer"></div>
   </div>
@@ -236,7 +236,7 @@
           <div>
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Event Launch Portal</span>
             <h2 class="text-2xl font-extrabold text-white mt-2">Ready to Start the CSSO Trivia Giveaway?</h2>
-            <p class="text-sm text-slate-300 max-w-xl mx-auto mt-1">Launching will open the Audience Presentation Stage, reset registered responses to 0, and display the Join QR Code on screen for audience phones.</p>
+            <p class="text-sm text-slate-300 max-w-xl mx-auto mt-1">Launching will open full-screen presentation mode, reset game state (making all players eligible again), and display the Join QR Code on screen for audience phones.</p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto items-center bg-cssoNavyDark/80 p-5 rounded-xl border border-cssoNavyLight">
@@ -261,7 +261,7 @@
           </div>
 
           <button onclick="launchGameAndReset()" class="w-full max-w-md mx-auto py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-lg rounded-xl shadow-xl transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
-            <i class="fa-solid fa-rocket text-2xl"></i> Launch Game & Open Audience Stage
+            <i class="fa-solid fa-expand text-2xl"></i> Launch Game & Fullscreen Stage
           </button>
         </div>
       </div>
@@ -365,18 +365,33 @@
               </div>
             </div>
 
-            <div class="pt-4 flex justify-center">
-              <button id="stageNextBtn" onclick="advanceToNextQuestion()" class="px-8 py-4 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-lg rounded-xl shadow-xl transition transform hover:scale-105 flex items-center gap-3">
+            <!-- NEXT QUESTION & JUMP TO SPECIFIC QUESTION SELECTOR -->
+            <div class="pt-4 flex flex-wrap items-center justify-center gap-3">
+              <button id="stageNextBtn" onclick="advanceToNextQuestion()" class="px-6 py-3 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-base rounded-xl shadow-xl transition transform hover:scale-105 flex items-center gap-2">
                 Next Question <i class="fa-solid fa-arrow-right"></i>
               </button>
+
+              <div class="flex items-center space-x-2 bg-cssoNavy px-3.5 py-2.5 rounded-xl border border-cssoNavyLight shadow-lg">
+                <label for="jumpQuestionSelect" class="text-xs font-bold text-slate-300">Jump To:</label>
+                <select id="jumpQuestionSelect" class="bg-cssoNavyDark text-xs font-bold text-cssoGold border border-cssoNavyLight rounded-lg px-2 py-1.5 focus:outline-none max-w-[180px]">
+                </select>
+                <button onclick="jumpToSelectedQuestion()" class="px-3 py-1.5 bg-cssoNavyLight hover:bg-slate-700 text-white font-bold text-xs rounded-lg border border-slate-600 transition flex items-center gap-1">
+                  <i class="fa-solid fa-share"></i> Go
+                </button>
+              </div>
             </div>
           </div>
 
           <div class="border-t border-cssoNavyLight pt-4 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
             <span>Stage Presentation View</span>
-            <button onclick="triggerGrandPodium()" class="px-3 py-1.5 rounded-lg bg-purple-900/60 text-purple-200 border border-purple-600 font-bold hover:bg-purple-800 transition">
-              <i class="fa-solid fa-trophy mr-1"></i> Trigger Grand Podium
-            </button>
+            <div class="flex items-center space-x-2">
+              <button onclick="requestFullScreenMode()" class="px-3 py-1.5 rounded-lg bg-cssoNavyLight text-slate-200 border border-slate-600 font-bold hover:bg-slate-700 transition">
+                <i class="fa-solid fa-expand mr-1"></i> Fullscreen
+              </button>
+              <button onclick="triggerGrandPodium()" class="px-3 py-1.5 rounded-lg bg-purple-900/60 text-purple-200 border border-purple-600 font-bold hover:bg-purple-800 transition">
+                <i class="fa-solid fa-trophy mr-1"></i> Trigger Grand Podium
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -595,18 +610,19 @@
     let ytErrorOccurred = false;
     let synthMusicInterval = null;
     let synthAudioCtx = null;
-    const YOUTUBE_VIDEO_ID = 'xyG94SV3hBo';
+    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo';
+    const YOUTUBE_PODIUM_VIDEO_ID = '7s7nnHw1p5g';
 
     function onYouTubeIframeAPIReady() {
       ytPlayer = new YT.Player('youtubeAudioPlayer', {
         height: '200',
         width: '200',
-        videoId: YOUTUBE_VIDEO_ID,
+        videoId: YOUTUBE_TIMER_VIDEO_ID,
         playerVars: {
           'autoplay': 0,
           'controls': 0,
           'loop': 1,
-          'playlist': YOUTUBE_VIDEO_ID,
+          'playlist': YOUTUBE_TIMER_VIDEO_ID,
           'enablejsapi': 1,
           'origin': window.location.origin
         },
@@ -648,10 +664,9 @@
     function playBassTimerMusic() {
       if (isMuted) return;
 
-      // Try playing official YouTube track first if not blocked
-      if (ytPlayer && typeof ytPlayer.playVideo === 'function' && !ytErrorOccurred) {
+      if (ytPlayer && typeof ytPlayer.loadVideoById === 'function' && !ytErrorOccurred) {
         try {
-          ytPlayer.seekTo(0);
+          ytPlayer.loadVideoById(YOUTUBE_TIMER_VIDEO_ID);
           ytPlayer.playVideo();
           return;
         } catch(e) {
@@ -659,7 +674,22 @@
         }
       }
 
-      // Fallback Synth Arcade Music
+      playSynthFallbackMusic();
+    }
+
+    function playPodiumVictoryMusic() {
+      if (isMuted) return;
+
+      if (ytPlayer && typeof ytPlayer.loadVideoById === 'function' && !ytErrorOccurred) {
+        try {
+          ytPlayer.loadVideoById(YOUTUBE_PODIUM_VIDEO_ID);
+          ytPlayer.playVideo();
+          return;
+        } catch(e) {
+          console.warn("YouTube podium song play attempt failed, using synth fallback.");
+        }
+      }
+
       playSynthFallbackMusic();
     }
 
@@ -743,6 +773,18 @@
       if (isMuted) stopBassTimerMusic();
     }
 
+    // ==================== FULL-SCREEN PRESENTATION MODE ====================
+    function requestFullScreenMode() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => console.log("Fullscreen request:", err.message));
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    }
+
     // ==================== DEFAULT 14 SYMPOSIUM QUESTIONS ====================
     const DEFAULT_QUESTIONS = [
       { id: "question_1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Building the Future Together"], correctIndex: 2, timeLimit: 15 },
@@ -784,6 +826,7 @@
 
       loadSavedQuestions();
       renderQuestionsList();
+      populateJumpQuestionDropdown();
       updateQrCode();
       initFirebaseSync();
     });
@@ -791,7 +834,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v8');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v10');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -809,10 +852,11 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v8', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v10', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
+      populateJumpQuestionDropdown();
     }
 
     function parseAndNormalizeQuestions(rawData) {
@@ -922,6 +966,31 @@
         `;
         container.appendChild(card);
       });
+
+      populateJumpQuestionDropdown();
+    }
+
+    function populateJumpQuestionDropdown() {
+      const select = document.getElementById('jumpQuestionSelect');
+      if (!select) return;
+      select.innerHTML = questions.map((q, idx) => `
+        <option value="${idx}">Q${idx + 1}: ${escapeHtml(q.text.length > 25 ? q.text.substring(0, 25) + '...' : q.text)}</option>
+      `).join('');
+
+      if (questions[currentQIndex + 1]) {
+        select.value = currentQIndex + 1;
+      } else {
+        select.value = currentQIndex;
+      }
+    }
+
+    function jumpToSelectedQuestion() {
+      const select = document.getElementById('jumpQuestionSelect');
+      if (!select) return;
+      const targetIdx = parseInt(select.value, 10);
+      if (!isNaN(targetIdx) && targetIdx >= 0 && targetIdx < questions.length) {
+        startQuestionSequence(targetIdx);
+      }
     }
 
     function saveQuestionFromForm() {
@@ -1160,12 +1229,24 @@
 
     function launchGameAndReset() {
       stopBassTimerMusic();
-      roomRef.set({
-        state: { activeGameState: 'LOBBY', currentQIndex: 0 },
-        players: {},
-        responses: {},
-        winners: {}
-      });
+
+      if (registeredPlayers && registeredPlayers.length > 0) {
+        registeredPlayers.forEach(p => {
+          roomRef.child(`players/${p.id}`).update({
+            score: 0,
+            wonIndividual: false
+          });
+        });
+      }
+
+      roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
+      roomRef.child('responses').remove();
+      roomRef.child('winners').remove();
+      roundWinnersLog = [];
+      renderWinnersLog();
+
+      requestFullScreenMode();
+
       setHostSubTab('stage');
       showStageScreen('lobby');
     }
@@ -1322,6 +1403,7 @@
 
     function showWinnerCard(winner) {
       showStageScreen('winner');
+      populateJumpQuestionDropdown();
       const nameDisplay = document.getElementById('winnerNameDisplay');
       const subDisplay = document.getElementById('winnerSubDisplay');
       const nextBtn = document.getElementById('stageNextBtn');
@@ -1493,7 +1575,7 @@
         qScrn.classList.add('hidden');
         lockedScrn.classList.add('hidden');
         feedbackScrn.classList.add('hidden');
-        winCard.classList.add('hidden');
+        winCard.classList.remove('hidden');
         waitScrn.classList.remove('hidden');
       }
     }
@@ -1556,19 +1638,41 @@
 
     function triggerGrandPodium() {
       stopBassTimerMusic();
+      playPodiumVictoryMusic();
+
       const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0));
       document.getElementById('podium1Name').textContent = sorted[0] ? sorted[0].name : '---';
       document.getElementById('podium1Score').textContent = `${(sorted[0] ? sorted[0].score : 0).toLocaleString()} pts`;
       document.getElementById('podium2Name').textContent = sorted[1] ? sorted[1].name : '---';
       document.getElementById('podium2Score').textContent = `${(sorted[1] ? sorted[1].score : 0).toLocaleString()} pts`;
-      document.getElementById('podium3Name').textContent = sorted[3] ? sorted[2].name : '---';
+      document.getElementById('podium3Name').textContent = sorted[2] ? sorted[2].name : '---';
       document.getElementById('podium3Score').textContent = `${(sorted[2] ? sorted[2].score : 0).toLocaleString()} pts`;
       document.getElementById('podiumModal').classList.remove('hidden');
       confetti({ particleCount: 150, spread: 90 });
     }
 
-    function closePodiumModal() { document.getElementById('podiumModal').classList.add('hidden'); }
-    function wipeResponsesPrompt() { if (confirm("Wipe all player data?")) roomRef.set(null); }
+    function closePodiumModal() {
+      stopBassTimerMusic();
+      document.getElementById('podiumModal').classList.add('hidden');
+    }
+    
+    function wipeResponsesPrompt() { 
+      if (confirm("Wipe all player response and winner history?")) {
+        if (registeredPlayers && registeredPlayers.length > 0) {
+          registeredPlayers.forEach(p => {
+            roomRef.child(`players/${p.id}`).update({
+              score: 0,
+              wonIndividual: false
+            });
+          });
+        }
+        roomRef.child('responses').remove();
+        roomRef.child('winners').remove();
+        roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
+        roundWinnersLog = [];
+        renderWinnersLog();
+      }
+    }
 
     function switchMainTab(tab) {
       if (tab === 'host') {
