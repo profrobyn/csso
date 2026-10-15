@@ -604,26 +604,27 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== DIRECT RAW MP3 AUDIO ENGINE ====================
+    // ==================== DIRECT DIRECT RAW MP3 AUDIO STREAMING ====================
     let isMuted = false;
     let audioUnlocked = false;
 
-    const QUESTION_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Question.mp3';
-    const PODIUM_AUDIO_URL = 'https://raw.githubusercontent.com/profrobyn/csso/main/Podium.mp3';
+    // Use GitHub direct raw endpoints so raw MP3 audio streams directly without HTML wrapping
+    const QUESTION_AUDIO_URL = 'https://github.com/profrobyn/csso/raw/main/Question.mp3';
+    const PODIUM_AUDIO_URL = 'https://github.com/profrobyn/csso/raw/main/Podium.mp3';
 
     const questionAudio = new Audio(QUESTION_AUDIO_URL);
     questionAudio.loop = true;
+    questionAudio.preload = 'auto';
 
     const podiumAudio = new Audio(PODIUM_AUDIO_URL);
     podiumAudio.loop = true;
+    podiumAudio.preload = 'auto';
 
     function unlockAudioContextOnUserGesture() {
       if (!audioUnlocked) {
         audioUnlocked = true;
-        questionAudio.play().then(() => {
-          questionAudio.pause();
-          questionAudio.currentTime = 0;
-        }).catch(() => {});
+        questionAudio.load();
+        podiumAudio.load();
       }
     }
 
@@ -638,16 +639,24 @@
       if (isMuted) return;
       podiumAudio.pause();
       podiumAudio.currentTime = 0;
+      
       questionAudio.currentTime = 0;
-      questionAudio.play().catch(e => console.error("Question audio playback error:", e));
+      const playPromise = questionAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => console.warn("Question audio playback error:", e));
+      }
     }
 
     function playPodiumVictoryMusic() {
       if (isMuted) return;
       questionAudio.pause();
       questionAudio.currentTime = 0;
+      
       podiumAudio.currentTime = 0;
-      podiumAudio.play().catch(e => console.error("Podium audio playback error:", e));
+      const playPromise = podiumAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => console.warn("Podium audio playback error:", e));
+      }
     }
 
     function stopBassTimerMusic() {
@@ -730,7 +739,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v18');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v19');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -748,7 +757,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v18', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v19', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
