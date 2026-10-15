@@ -124,7 +124,7 @@
 
         <div class="flex items-center space-x-3">
           <button onclick="testYouTubeAudio()" class="px-3 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition">
-            <i class="fa-solid fa-music mr-1"></i> Test Track
+            <i class="fa-solid fa-music mr-1"></i> Test Countdown Song
           </button>
           <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs">
             <i class="fa-solid fa-volume-high mr-1"></i> Music On
@@ -610,7 +610,7 @@
     let ytErrorOccurred = false;
     let synthMusicInterval = null;
     let synthAudioCtx = null;
-    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo'; // Requested track for individual question countdowns
+    const YOUTUBE_TIMER_VIDEO_ID = 'xyG94SV3hBo'; // Restored dramatic music track for individual questions
     const YOUTUBE_PODIUM_VIDEO_ID = '7s7nnHw1p5g';
 
     function onYouTubeIframeAPIReady() {
@@ -664,9 +664,13 @@
     function playBassTimerMusic() {
       if (isMuted) return;
 
-      if (ytPlayer && typeof ytPlayer.loadVideoById === 'function' && !ytErrorOccurred) {
+      if (ytPlayer && typeof ytPlayer.playVideo === 'function' && !ytErrorOccurred) {
         try {
-          ytPlayer.loadVideoById(YOUTUBE_TIMER_VIDEO_ID);
+          if (typeof ytPlayer.getVideoData === 'function' && ytPlayer.getVideoData().video_id !== YOUTUBE_TIMER_VIDEO_ID) {
+            ytPlayer.loadVideoById(YOUTUBE_TIMER_VIDEO_ID);
+          } else {
+            ytPlayer.seekTo(0);
+          }
           ytPlayer.playVideo();
           return;
         } catch(e) {
@@ -824,7 +828,6 @@
       if (isPlayerJoin) {
         isHost = false;
         switchMainTab('player');
-        // Hide Stage & Host Panel button so players only see their game page
         const navHostBtn = document.getElementById('navHostBtn');
         if (navHostBtn) navHostBtn.classList.add('hidden');
       }
@@ -839,7 +842,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v11');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v12');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -857,7 +860,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v11', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v12', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
