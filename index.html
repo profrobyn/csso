@@ -21,6 +21,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
+  <!-- YOUTUBE IFRAME PLAYER API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
   <script>
     tailwind.config = {
       theme: {
@@ -70,6 +73,11 @@
 </head>
 <body class="min-h-screen flex flex-col pb-28">
 
+  <!-- HIDDEN YOUTUBE AUDIO PLAYER CONTAINER -->
+  <div class="hidden">
+    <div id="youtubeAudioPlayer"></div>
+  </div>
+
   <!-- TOP APP BAR -->
   <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-4 py-3 sticky top-0 z-40 flex items-center justify-between shadow-lg">
     <div class="flex items-center space-x-3">
@@ -117,7 +125,7 @@
 
         <div class="flex items-center space-x-3">
           <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs">
-            <i class="fa-solid fa-volume-high mr-1"></i> Music On
+            <i class="fa-solid fa-volume-high mr-1"></i> YouTube Audio On
           </button>
           <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
             <i class="fa-solid fa-circle-check mr-1"></i> Firebase Realtime Active
@@ -577,93 +585,36 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== WEB AUDIO HIGH-ENERGY SYNTH-WAVE SOUNDTRACK ====================
-    let audioCtx = null;
+    // ==================== YOUTUBE AUDIO PLAYER INTEGRATION ====================
+    let ytPlayer = null;
     let isMuted = false;
-    let musicInterval = null;
+    const YOUTUBE_VIDEO_ID = 'xyG94SV3hBo'; // Exact YouTube Music Track requested
+
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player('youtubeAudioPlayer', {
+        height: '0',
+        width: '0',
+        videoId: YOUTUBE_VIDEO_ID,
+        playerVars: {
+          'autoplay': 0,
+          'controls': 0,
+          'loop': 1,
+          'playlist': YOUTUBE_VIDEO_ID
+        }
+      });
+    }
 
     function playBassTimerMusic() {
       if (isMuted) return;
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
+        ytPlayer.seekTo(0);
+        ytPlayer.playVideo();
       }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      stopBassTimerMusic();
-
-      let step = 0;
-      // Upbeat 80s Synth-Wave Melodic & Bass Notes
-      const bassNotes = [110, 110, 130.81, 110, 146.83, 130.81, 164.81, 146.83];
-      const leadNotes = [440, 523.25, 659.25, 523.25, 587.33, 659.25, 783.99, 659.25];
-
-      musicInterval = setInterval(() => {
-        if (isMuted || !audioCtx) return;
-        const now = audioCtx.currentTime;
-
-        // Punchy Synth Bass Kick
-        if (step % 2 === 0) {
-          const kickOsc = audioCtx.createOscillator();
-          const kickGain = audioCtx.createGain();
-          kickOsc.frequency.setValueAtTime(150, now);
-          kickOsc.frequency.exponentialRampToValueAtTime(0.01, now + 0.12);
-          kickGain.gain.setValueAtTime(0.6, now);
-          kickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-          kickOsc.connect(kickGain);
-          kickGain.connect(audioCtx.destination);
-          kickOsc.start(now);
-          kickOsc.stop(now + 0.12);
-        }
-
-        // Crisp Synth Hi-Hat
-        const hatOsc = audioCtx.createOscillator();
-        const hatGain = audioCtx.createGain();
-        hatOsc.type = 'square';
-        hatOsc.frequency.setValueAtTime(2400, now);
-        hatGain.gain.setValueAtTime(0.08, now);
-        hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-        hatOsc.connect(hatGain);
-        hatGain.connect(audioCtx.destination);
-        hatOsc.start(now);
-        hatOsc.stop(now + 0.03);
-
-        // Driving Rolling Synth Bassline
-        const bassOsc = audioCtx.createOscillator();
-        const bassGain = audioCtx.createGain();
-        const bassFilter = audioCtx.createBiquadFilter();
-        bassOsc.type = 'sawtooth';
-        bassOsc.frequency.setValueAtTime(bassNotes[step % bassNotes.length], now);
-        bassFilter.type = 'lowpass';
-        bassFilter.frequency.setValueAtTime(600, now);
-        bassFilter.frequency.exponentialRampToValueAtTime(150, now + 0.15);
-        bassGain.gain.setValueAtTime(0.25, now);
-        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        bassOsc.connect(bassFilter);
-        bassFilter.connect(bassGain);
-        bassGain.connect(audioCtx.destination);
-        bassOsc.start(now);
-        bassOsc.stop(now + 0.15);
-
-        // Bright Arcade Synth Lead Arpeggio
-        const leadOsc = audioCtx.createOscillator();
-        const leadGain = audioCtx.createGain();
-        leadOsc.type = 'square';
-        leadOsc.frequency.setValueAtTime(leadNotes[step % leadNotes.length], now);
-        leadGain.gain.setValueAtTime(0.12, now);
-        leadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        leadOsc.connect(leadGain);
-        leadGain.connect(audioCtx.destination);
-        leadOsc.start(now);
-        leadOsc.stop(now + 0.12);
-
-        step++;
-      }, 160); // Fast arcade tempo (~185 BPM)
     }
 
     function stopBassTimerMusic() {
-      if (musicInterval) {
-        clearInterval(musicInterval);
-        musicInterval = null;
+      if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+        ytPlayer.pauseVideo();
       }
     }
 
@@ -671,10 +622,13 @@
       isMuted = !isMuted;
       const btn = document.getElementById('musicToggleBtn');
       if (btn) {
-        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark mr-1"></i> Music Off' : '<i class="fa-solid fa-volume-high mr-1"></i> Music On';
+        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark mr-1"></i> Audio Off' : '<i class="fa-solid fa-volume-high mr-1"></i> YouTube Audio On';
         btn.className = isMuted ? 'px-3 py-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs' : 'px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs';
       }
-      if (isMuted) stopBassTimerMusic();
+      if (ytPlayer && typeof ytPlayer.mute === 'function') {
+        if (isMuted) ytPlayer.mute();
+        else ytPlayer.unMute();
+      }
     }
 
     // ==================== DEFAULT 14 SYMPOSIUM QUESTIONS ====================
@@ -725,7 +679,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v6');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v7');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -743,7 +697,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v6', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v7', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
