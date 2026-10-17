@@ -103,7 +103,7 @@
 </head>
 <body class="min-h-screen flex flex-col pb-6" onclick="unlockAudioContextOnUserGesture()">
 
-  <!-- CLEAN TOP APP HEADER -->
+  <!-- CLEAN HEADER WITH SINGLE CONTROL BUTTON -->
   <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-6 py-4 sticky top-0 z-40 flex items-center justify-between shadow-lg">
     <div class="flex items-center space-x-3">
       <div class="w-10 h-10 rounded-xl bg-cssoGold flex items-center justify-center text-cssoNavy font-bold text-2xl shadow-md">
@@ -112,6 +112,14 @@
       <div>
         <h1 class="text-xl font-black text-cssoGold tracking-wide leading-none">CSSO Trivia Giveaway</h1>
       </div>
+    </div>
+
+    <!-- SINGLE HOST CONTROLS TRIGGER BUTTON -->
+    <div class="flex items-center space-x-2">
+      <button onclick="toggleAdminModal()" class="px-4 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-100 font-extrabold text-xs rounded-xl border border-slate-600 transition flex items-center gap-2 shadow-lg">
+        <i class="fa-solid fa-sliders text-cssoGold text-sm"></i>
+        <span>Host Controls</span>
+      </button>
     </div>
   </header>
 
@@ -124,11 +132,11 @@
     <!-- ==================== HOST / STAGE VIEW ==================== -->
     <div id="hostViewSection" class="space-y-6">
 
-      <!-- AUDIENCE STAGE (DIRECT CLEAN LAUNCH) -->
+      <!-- AUDIENCE PRESENTATION STAGE -->
       <div id="hostSubTabStage" class="space-y-6">
         <div class="bg-cssoNavyDark p-6 md:p-10 rounded-3xl border-2 border-cssoNavyLight shadow-2xl relative min-h-[600px] flex flex-col justify-between">
 
-          <!-- STAGE LOBBY SCREEN: JUMPS DIRECTLY TO JOIN INSTRUCTIONS -->
+          <!-- STAGE LOBBY SCREEN (JUMPS DIRECTLY TO JOIN CONTEST) -->
           <div id="stageLobbyScreen" class="py-12 text-center space-y-8 my-auto">
             <h2 class="text-4xl md:text-6xl font-black text-white tracking-tight">Join the Live Trivia Contest</h2>
             <p class="text-lg text-slate-300 max-w-xl mx-auto">Scan the QR code below or open the browser link on your smartphone to register and compete!</p>
@@ -199,6 +207,7 @@
             </div>
           </div>
 
+          <!-- RANDOMIZER SCREEN -->
           <div id="stageRandomizerScreen" class="hidden py-10 text-center space-y-6 my-auto">
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Round Prize Draw</span>
             <h2 class="text-2xl md:text-4xl font-black text-white">Spinning for Eligible Winner...</h2>
@@ -380,6 +389,163 @@
 
   </main>
 
+  <!-- ==================== HOST CONTROLS MODAL ==================== -->
+  <div id="adminModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+    <div class="bg-cssoNavyDark max-w-4xl w-full p-6 rounded-3xl border-2 border-cssoGold shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      
+      <div class="flex items-center justify-between border-b border-cssoNavyLight pb-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-cssoGold text-cssoNavy flex items-center justify-center font-bold text-lg">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <h3 class="text-xl font-black text-white">Host Control Dashboard</h3>
+        </div>
+        <button onclick="closeAdminModal()" class="w-9 h-9 rounded-full bg-cssoNavyLight hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-lg transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- SYSTEM CONTROL TOOLBAR -->
+      <div class="bg-cssoNavy p-4 rounded-2xl border border-cssoNavyLight space-y-3">
+        <h4 class="text-xs font-bold text-cssoGold uppercase tracking-wider">Quick Actions & Audio</h4>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3.5 py-2 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs hover:bg-emerald-900 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-volume-high"></i> Music On
+            </button>
+            <button onclick="testAudio()" class="px-3.5 py-2 rounded-xl bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-music"></i> Test Audio
+            </button>
+            <button onclick="switchMainTab('player')" class="px-3.5 py-2 rounded-xl bg-cssoNavyLight text-slate-200 border border-slate-600 font-bold text-xs hover:bg-slate-700 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-mobile-screen"></i> Switch to Player View
+            </button>
+          </div>
+
+          <!-- DANGER RESTART BUTTON -->
+          <button onclick="restartGameFullWipe()" class="px-4 py-2 rounded-xl bg-rose-900 hover:bg-rose-800 text-rose-100 font-black text-xs border border-rose-600 transition flex items-center gap-2 shadow-lg">
+            <i class="fa-solid fa-power-off"></i>
+            <span>Restart Game & Force Re-login</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- QUESTION BUILDER SECTION -->
+      <div class="bg-cssoNavy p-5 rounded-2xl border border-cssoNavyLight space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h4 id="formTitle" class="text-sm font-bold text-cssoGold flex items-center gap-2">
+            <i class="fa-solid fa-plus-circle"></i> Add New Trivia Question
+          </h4>
+          
+          <div class="flex items-center space-x-2">
+            <button onclick="exportJSONFile()" class="px-2.5 py-1.5 bg-cssoNavyDark hover:bg-slate-800 text-slate-300 text-[11px] font-bold rounded-lg border border-slate-700 transition">Export JSON</button>
+            <button onclick="openRawJSONModal()" class="px-2.5 py-1.5 bg-cssoNavyDark hover:bg-slate-800 text-slate-300 text-[11px] font-bold rounded-lg border border-slate-700 transition">Paste JSON</button>
+            <button onclick="resetDefaultQuestions()" class="px-2.5 py-1.5 bg-amber-950/40 hover:bg-amber-900/60 text-amber-200 text-[11px] font-bold rounded-lg border border-amber-700 transition">Reset Defaults</button>
+          </div>
+        </div>
+
+        <input type="hidden" id="editQuestionIndex" value="-1">
+
+        <div>
+          <label class="block text-xs text-slate-300 font-medium mb-1">Question Prompt Text</label>
+          <textarea id="qText" rows="2" class="w-full bg-cssoNavyDark border border-cssoNavyLight rounded-xl p-3 text-xs text-white focus:border-cssoGold focus:outline-none" placeholder="Enter trivia question prompt..."></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 font-medium mb-1">Option A</label>
+            <input type="text" id="qOpt0" class="w-full bg-cssoNavyDark border border-cssoNavyLight rounded-lg p-2 text-xs text-white focus:border-cssoGold focus:outline-none" placeholder="Option A text">
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 font-medium mb-1">Option B</label>
+            <input type="text" id="qOpt1" class="w-full bg-cssoNavyDark border border-cssoNavyLight rounded-lg p-2 text-xs text-white focus:border-cssoGold focus:outline-none" placeholder="Option B text">
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 font-medium mb-1">Option C</label>
+            <input type="text" id="qOpt2" class="w-full bg-cssoNavyDark border border-cssoNavyLight rounded-lg p-2 text-xs text-white focus:border-cssoGold focus:outline-none" placeholder="Option C text">
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 font-medium mb-1">Option D</label>
+            <input type="text" id="qOpt3" class="w-full bg-cssoNavyDark border border-cssoNavyLight rounded-lg p-2 text-xs text-white focus:border-cssoGold focus:outline-none" placeholder="Option D text">
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+          <div class="flex items-center space-x-4">
+            <div>
+              <label class="block text-[11px] text-slate-400 font-medium mb-1">Correct Choice</label>
+              <select id="qCorrect" class="bg-cssoNavyDark border border-cssoNavyLight rounded-lg px-3 py-1.5 text-xs text-white focus:border-cssoGold focus:outline-none">
+                <option value="0">Option A</option>
+                <option value="1">Option B</option>
+                <option value="2">Option C</option>
+                <option value="3">Option D</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 font-medium mb-1">Timer (Sec)</label>
+              <input type="number" id="qTimer" value="15" min="5" max="120" class="w-20 bg-cssoNavyDark border border-cssoNavyLight rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-cssoGold focus:outline-none">
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button id="cancelEditBtn" onclick="cancelQuestionEdit()" class="hidden px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">Cancel</button>
+            <button onclick="saveQuestionFromForm()" class="px-4 py-2 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-xs rounded-xl transition shadow">
+              <i class="fa-solid fa-save mr-1"></i> Save Question
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUESTIONS LIST -->
+      <div class="bg-cssoNavy p-5 rounded-2xl border border-cssoNavyLight space-y-3">
+        <h4 class="text-xs font-bold text-white flex items-center justify-between border-b border-cssoNavyLight pb-2">
+          <span>Question Bank (<span id="qCountText">0</span>)</span>
+          <span class="text-[10px] text-slate-400 font-normal">Use ⬆️ / ⬇️ to reorder questions</span>
+        </h4>
+        <div id="questionsList" class="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1"></div>
+      </div>
+
+      <!-- WINNERS LOG -->
+      <div class="bg-cssoNavy p-5 rounded-2xl border border-cssoNavyLight space-y-3">
+        <h4 class="text-xs font-bold text-cssoGold flex items-center gap-2">
+          <i class="fa-solid fa-trophy"></i> Round Winners Log
+        </h4>
+        <div id="winnersLogContainer" class="space-y-2 max-h-[150px] overflow-y-auto custom-scrollbar">
+          <p class="text-xs text-slate-400 italic">No round winners awarded yet.</p>
+        </div>
+      </div>
+
+      <div class="pt-2 text-right">
+        <button onclick="closeAdminModal()" class="px-6 py-2 bg-cssoGold text-cssoNavy font-bold text-xs rounded-xl shadow transition">Close Controls</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RAW JSON PASTE MODAL -->
+  <div id="jsonModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-cssoNavyDark max-w-2xl w-full p-6 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-code text-cssoGold"></i> Raw JSON Question Data
+        </h3>
+        <button onclick="closeRawJSONModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <p class="text-xs text-slate-300">View or paste your raw JSON question array below:</p>
+      <textarea id="rawJsonTextArea" rows="10" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-xs font-mono text-emerald-400 focus:border-cssoGold focus:outline-none"></textarea>
+
+      <div class="flex items-center justify-between pt-2">
+        <button onclick="copyRawJSONText()" class="px-3 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg transition">
+          <i class="fa-solid fa-copy mr-1"></i> Copy to Clipboard
+        </button>
+        <div class="flex items-center space-x-2">
+          <button onclick="closeRawJSONModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">Cancel</button>
+          <button onclick="applyRawJSONText()" class="px-4 py-2 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-xs rounded-lg transition">Apply JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- GRAND PODIUM MODAL -->
   <div id="podiumModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-cssoNavyDark max-w-xl w-full p-6 md:p-8 rounded-2xl border-2 border-cssoGold shadow-2xl space-y-6 text-center relative overflow-hidden">
@@ -465,6 +631,13 @@
       }
     }
 
+    function testAudio() {
+      audioUnlocked = true;
+      if (isMuted) toggleMusicMute();
+      playBassTimerMusic();
+      setTimeout(() => { stopBassTimerMusic(); }, 3500);
+    }
+
     function playBassTimerMusic() {
       if (isMuted) return;
       podiumAudio.pause();
@@ -492,6 +665,16 @@
     function stopBassTimerMusic() {
       questionAudio.pause();
       podiumAudio.pause();
+    }
+
+    function toggleMusicMute() {
+      isMuted = !isMuted;
+      const btn = document.getElementById('musicToggleBtn');
+      if (btn) {
+        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark"></i> Music Off' : '<i class="fa-solid fa-volume-high"></i> Music On';
+        btn.className = isMuted ? 'px-3.5 py-2 rounded-xl bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs transition flex items-center gap-1.5' : 'px-3.5 py-2 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs transition flex items-center gap-1.5';
+      }
+      if (isMuted) stopBassTimerMusic();
     }
 
     // ==================== FULL-SCREEN PRESENTATION MODE ====================
@@ -546,6 +729,7 @@
       }
 
       loadSavedQuestions();
+      renderQuestionsList();
       populateJumpQuestionDropdown();
       updateQrCode();
       initFirebaseSync();
@@ -554,7 +738,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v25');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v26');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -572,7 +756,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v25', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v26', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -633,26 +817,42 @@
       return normalized.length > 0 ? normalized : null;
     }
 
-    function populateJumpQuestionDropdown() {
-      const select = document.getElementById('jumpQuestionSelect');
-      if (!select) return;
-      select.innerHTML = questions.map((q, idx) => `
-        <option value="${idx}">Q${idx + 1}: ${escapeHtml(q.text.length > 25 ? q.text.substring(0, 25) + '...' : q.text)}</option>
-      `).join('');
-
-      if (questions[currentQIndex + 1]) {
-        select.value = currentQIndex + 1;
-      } else {
-        select.value = currentQIndex;
-      }
+    function toggleAdminModal() {
+      const modal = document.getElementById('adminModal');
+      if (modal) modal.classList.toggle('hidden');
     }
 
-    function jumpToSelectedQuestion() {
-      const select = document.getElementById('jumpQuestionSelect');
-      if (!select) return;
-      const targetIdx = parseInt(select.value, 10);
-      if (!isNaN(targetIdx) && targetIdx >= 0 && targetIdx < questions.length) {
-        startQuestionSequence(targetIdx);
+    function closeAdminModal() {
+      const modal = document.getElementById('adminModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // ==================== SYSTEM RESTART & FORCED RE-LOGIN ====================
+    function restartGameFullWipe() {
+      if (confirm("Restart game and wipe all connected players? This will log everyone out and force them to re-register on their phones.")) {
+        stopBassTimerMusic();
+
+        // Wipe all connected entities in Realtime DB
+        roomRef.child('players').remove();
+        roomRef.child('responses').remove();
+        roomRef.child('winners').remove();
+        roomRef.child('waves').remove();
+
+        registeredPlayers = [];
+        currentResponses = [];
+        roundWinnersLog = [];
+        renderWinnersLog();
+        updateLobbyPlayerCounts();
+
+        roomRef.child('state').set({ 
+          activeGameState: 'LOBBY', 
+          currentQIndex: 0,
+          resetAt: Date.now()
+        });
+
+        closeAdminModal();
+        showStageScreen('lobby');
+        alert("Game restarted! All players logged out.");
       }
     }
 
@@ -664,6 +864,7 @@
         updateLobbyPlayerCounts();
         renderStageLeaderboard();
 
+        // FORCED LOGOUT: If localPlayer exists but is no longer in Firebase, force re-registration!
         if (localPlayer) {
           if (val && val[localPlayer.id]) {
             localPlayer = val[localPlayer.id];
@@ -675,6 +876,9 @@
             const gameCard = document.getElementById('playerGameplayCard');
             if (regCard) regCard.classList.remove('hidden');
             if (gameCard) gameCard.classList.add('hidden');
+            
+            const nameInput = document.getElementById('playerNameInput');
+            if (nameInput) nameInput.value = '';
           }
         }
       });
@@ -883,6 +1087,7 @@
           });
 
           roundWinnersLog.push({ qIndex: currentQIndex, winnerPlayer: finalWinner });
+          renderWinnersLog();
           showWinnerCard(finalWinner);
         }
       }, 100);
@@ -913,7 +1118,6 @@
       }
     }
 
-    // ==================== TOP 10 LEADERBOARD STAGE RENDERER ====================
     function renderStageLeaderboard() {
       const container = document.getElementById('stageLeaderboardList');
       if (!container) return;
@@ -1205,6 +1409,208 @@
         document.getElementById('hostViewSection').classList.add('hidden');
         document.getElementById('playerViewSection').classList.remove('hidden');
       }
+      closeAdminModal();
+    }
+
+    // ==================== QUESTION BANK CRUD ====================
+    function renderQuestionsList() {
+      const container = document.getElementById('questionsList');
+      const countText = document.getElementById('qCountText');
+      if (countText) countText.textContent = questions.length;
+
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (questions.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic py-3 text-center">No questions in bank.</p>`;
+        return;
+      }
+
+      questions.forEach((q, idx) => {
+        const card = document.createElement('div');
+        card.className = "bg-cssoNavyDark p-3 rounded-xl border border-cssoNavyLight flex items-center justify-between gap-2 text-xs";
+        
+        card.innerHTML = `
+          <div class="truncate flex-1 space-y-0.5">
+            <p class="font-bold text-white truncate"><span class="text-cssoGold mr-1">#${idx + 1}</span> ${escapeHtml(q.text)}</p>
+            <p class="text-[10px] text-slate-400">Correct: ${String.fromCharCode(65 + q.correctIndex)} | Timer: ${q.timeLimit}s</p>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0">
+            <button onclick="moveQuestion(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-20 text-slate-500 p-1"' : 'class="text-slate-300 hover:text-cssoGold p-1"'}><i class="fa-solid fa-arrow-up"></i></button>
+            <button onclick="moveQuestion(${idx}, 1)" ${idx === questions.length - 1 ? 'disabled class="opacity-20 text-slate-500 p-1"' : 'class="text-slate-300 hover:text-cssoGold p-1"'}><i class="fa-solid fa-arrow-down"></i></button>
+            <button onclick="editQuestion(${idx})" class="text-emerald-400 p-1"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="deleteQuestion(${idx})" class="text-rose-400 p-1"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      populateJumpQuestionDropdown();
+    }
+
+    function populateJumpQuestionDropdown() {
+      const select = document.getElementById('jumpQuestionSelect');
+      if (!select) return;
+      select.innerHTML = questions.map((q, idx) => `
+        <option value="${idx}">Q${idx + 1}: ${escapeHtml(q.text.length > 25 ? q.text.substring(0, 25) + '...' : q.text)}</option>
+      `).join('');
+
+      if (questions[currentQIndex + 1]) {
+        select.value = currentQIndex + 1;
+      } else {
+        select.value = currentQIndex;
+      }
+    }
+
+    function jumpToSelectedQuestion() {
+      const select = document.getElementById('jumpQuestionSelect');
+      if (!select) return;
+      const targetIdx = parseInt(select.value, 10);
+      if (!isNaN(targetIdx) && targetIdx >= 0 && targetIdx < questions.length) {
+        startQuestionSequence(targetIdx);
+      }
+    }
+
+    function saveQuestionFromForm() {
+      const qText = document.getElementById('qText').value.trim();
+      const opt0 = document.getElementById('qOpt0').value.trim();
+      const opt1 = document.getElementById('qOpt1').value.trim();
+      const opt2 = document.getElementById('qOpt2').value.trim();
+      const opt3 = document.getElementById('qOpt3').value.trim();
+      const correctVal = parseInt(document.getElementById('qCorrect').value, 10);
+      const timerVal = parseInt(document.getElementById('qTimer').value, 10) || 15;
+      const editIdx = parseInt(document.getElementById('editQuestionIndex').value, 10);
+
+      if (!qText || !opt0 || !opt1 || !opt2 || !opt3) {
+        alert("Please fill in the prompt and all 4 choices.");
+        return;
+      }
+
+      const qObj = {
+        id: editIdx >= 0 ? questions[editIdx].id : `q_${Date.now()}`,
+        text: qText,
+        options: [opt0, opt1, opt2, opt3],
+        correctIndex: correctVal,
+        timeLimit: timerVal
+      };
+
+      if (editIdx >= 0 && editIdx < questions.length) {
+        questions[editIdx] = qObj;
+      } else {
+        questions.push(qObj);
+      }
+
+      saveQuestionsToStorage();
+      resetForm();
+      renderQuestionsList();
+    }
+
+    function editQuestion(idx) {
+      const q = questions[idx];
+      if (!q) return;
+
+      document.getElementById('editQuestionIndex').value = idx;
+      document.getElementById('qText').value = q.text;
+      document.getElementById('qOpt0').value = q.options[0] || '';
+      document.getElementById('qOpt1').value = q.options[1] || '';
+      document.getElementById('qOpt2').value = q.options[2] || '';
+      document.getElementById('qOpt3').value = q.options[3] || '';
+      document.getElementById('qCorrect').value = q.correctIndex;
+      document.getElementById('qTimer').value = q.timeLimit;
+
+      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Question #${idx + 1}`;
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+    }
+
+    function cancelQuestionEdit() { resetForm(); }
+
+    function resetForm() {
+      document.getElementById('editQuestionIndex').value = "-1";
+      document.getElementById('qText').value = "";
+      document.getElementById('qOpt0').value = "";
+      document.getElementById('qOpt1').value = "";
+      document.getElementById('qOpt2').value = "";
+      document.getElementById('qOpt3').value = "";
+      document.getElementById('qCorrect').value = "0";
+      document.getElementById('qTimer').value = "15";
+
+      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Add New Trivia Question`;
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+    }
+
+    function deleteQuestion(idx) {
+      if (confirm(`Delete Question #${idx + 1}?`)) {
+        questions.splice(idx, 1);
+        saveQuestionsToStorage();
+        renderQuestionsList();
+      }
+    }
+
+    function moveQuestion(idx, direction) {
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= questions.length) return;
+      const temp = questions[idx];
+      questions[idx] = questions[targetIdx];
+      questions[targetIdx] = temp;
+      saveQuestionsToStorage();
+      renderQuestionsList();
+    }
+
+    function exportJSONFile() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `csso_trivia_questions_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function openRawJSONModal() {
+      document.getElementById('rawJsonTextArea').value = JSON.stringify(questions, null, 2);
+      document.getElementById('jsonModal').classList.remove('hidden');
+    }
+
+    function closeRawJSONModal() { document.getElementById('jsonModal').classList.add('hidden'); }
+
+    function copyRawJSONText() {
+      const area = document.getElementById('rawJsonTextArea');
+      area.select();
+      navigator.clipboard.writeText(area.value);
+      alert("JSON copied!");
+    }
+
+    function applyRawJSONText() {
+      const val = document.getElementById('rawJsonTextArea').value;
+      const normalized = parseAndNormalizeQuestions(val);
+      if (normalized && normalized.length > 0) {
+        questions = normalized;
+        saveQuestionsToStorage();
+        renderQuestionsList();
+        closeRawJSONModal();
+        alert(`🎉 Applied ${questions.length} questions!`);
+      } else {
+        alert("⚠️ Invalid JSON syntax.");
+      }
+    }
+
+    function resetDefaultQuestions() {
+      if (confirm("Reset question bank to Fall 2026 CSSO Symposium defaults?")) {
+        questions = parseAndNormalizeQuestions(DEFAULT_QUESTIONS);
+        saveQuestionsToStorage();
+        renderQuestionsList();
+      }
+    }
+
+    function renderWinnersLog() {
+      const container = document.getElementById('winnersLogContainer');
+      if (!container) return;
+      container.innerHTML = roundWinnersLog.map(log => `
+        <div class="p-2.5 bg-cssoNavyDark rounded-lg border border-cssoNavyLight flex items-center justify-between text-xs">
+          <span class="text-white font-semibold">Q#${log.qIndex + 1}: ${escapeHtml(log.winnerPlayer.name)}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600 font-bold">Round Winner</span>
+        </div>
+      `).join('');
     }
 
     function escapeHtml(str) { return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
