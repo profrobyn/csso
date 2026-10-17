@@ -8,6 +8,12 @@
   <meta http-equiv="Expires" content="0">
   
   <title>CSSO Trivia Giveaway - Live Event Portal</title>
+
+  <!-- Google Fonts: Playful Cartoonish Countdown Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Luckiest+Guy&display=swap" rel="stylesheet">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome -->
@@ -63,6 +69,26 @@
       gap: 0.5rem !important;
     }
 
+    /* CARTOONISH COUNTDOWN NUMBERS */
+    .cartoon-timer {
+      font-family: 'Luckiest Guy', cursive, sans-serif;
+      color: #fcd34d;
+      text-shadow: 
+        3px 3px 0px #060e1a,
+        -3px -3px 0px #060e1a,
+        3px -3px 0px #060e1a,
+        -3px 3px 0px #060e1a,
+        0px 6px 0px #d97706,
+        0px 10px 15px rgba(0,0,0,0.7);
+      letter-spacing: 0.05em;
+      display: inline-block;
+      animation: cartoonPulse 0.8s infinite alternate ease-in-out;
+    }
+    @keyframes cartoonPulse {
+      0% { transform: scale(1) rotate(-1deg); }
+      100% { transform: scale(1.08) rotate(1deg); }
+    }
+
     /* Floating Wave Pop Animation */
     @keyframes floatPop {
       0% { transform: translateY(20px) scale(0.8); opacity: 0; }
@@ -77,8 +103,8 @@
 </head>
 <body class="min-h-screen flex flex-col pb-6" onclick="unlockAudioContextOnUserGesture()">
 
-  <!-- TOP APP BAR -->
-  <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-4 py-3 sticky top-0 z-40 flex items-center justify-between shadow-lg">
+  <!-- TOP APP BAR WITH CLEAN INTEGRATED CONTROLS -->
+  <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-4 py-3 sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 shadow-lg">
     <div class="flex items-center space-x-3">
       <div class="w-9 h-9 rounded-lg bg-cssoGold flex items-center justify-center text-cssoNavy font-bold text-xl shadow-md">
         <i class="fa-solid fa-award"></i>
@@ -88,14 +114,40 @@
       </div>
     </div>
 
-    <!-- Mode Switcher Nav -->
-    <div id="modeSwitcherNav" class="flex items-center space-x-2 bg-cssoNavy rounded-lg p-1 border border-cssoNavyLight">
-      <button id="navHostBtn" onclick="switchMainTab('host')" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition">
-        <i class="fa-solid fa-desktop mr-1"></i> Stage & Host Panel
+    <!-- HOST SUB-TAB SWITCHER (CLEAN & COMPACT) -->
+    <div id="hostTabControls" class="flex items-center space-x-1.5 bg-cssoNavy p-1 rounded-xl border border-cssoNavyLight">
+      <button id="tabBtnStage" onclick="setHostSubTab('stage')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow">
+        <i class="fa-solid fa-tv mr-1"></i> Stage
       </button>
-      <button id="navPlayerBtn" onclick="switchMainTab('player')" class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition">
-        <i class="fa-solid fa-mobile-screen mr-1"></i> Player View
+      <button id="tabBtnBuilder" onclick="setHostSubTab('builder')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition text-slate-300 hover:text-white">
+        <i class="fa-solid fa-list-check mr-1"></i> Questions
       </button>
+      <button id="tabBtnWinners" onclick="setHostSubTab('winners')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition text-slate-300 hover:text-white">
+        <i class="fa-solid fa-trophy mr-1"></i> Winners Log
+      </button>
+    </div>
+
+    <!-- QUICK UTILITY CONTROLS -->
+    <div class="flex items-center space-x-2">
+      <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-2.5 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs hover:bg-emerald-900 transition">
+        <i class="fa-solid fa-volume-high mr-1"></i> Music On
+      </button>
+      <button onclick="testAudio()" class="px-2.5 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition hidden md:inline-flex">
+        <i class="fa-solid fa-music mr-1"></i> Test
+      </button>
+      <button onclick="wipeResponsesPrompt()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition" title="Wipe Lobby & Game">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+
+      <!-- View Switcher -->
+      <div id="modeSwitcherNav" class="flex items-center space-x-1 bg-cssoNavy rounded-lg p-1 border border-cssoNavyLight ml-2">
+        <button id="navHostBtn" onclick="switchMainTab('host')" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition">
+          <i class="fa-solid fa-desktop mr-1"></i> Host
+        </button>
+        <button id="navPlayerBtn" onclick="switchMainTab('player')" class="px-2.5 py-1 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition">
+          <i class="fa-solid fa-mobile-screen mr-1"></i> Player
+        </button>
+      </div>
     </div>
   </header>
 
@@ -108,37 +160,156 @@
     <!-- ==================== HOST / STAGE VIEW ==================== -->
     <div id="hostViewSection" class="space-y-6">
 
-      <div class="flex flex-wrap items-center justify-between gap-3 bg-cssoNavyDark p-3 rounded-xl border border-cssoNavyLight">
-        <div class="flex items-center space-x-2">
-          <button id="tabBtnBuilder" onclick="setHostSubTab('builder')" class="px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoGold text-cssoNavy shadow-md">
-            <i class="fa-solid fa-list-check mr-1.5"></i> Question Builder & Launch
-          </button>
-          <button id="tabBtnStage" onclick="setHostSubTab('stage')" class="px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoNavyLight text-slate-200 hover:text-white">
-            <i class="fa-solid fa-tv mr-1.5"></i> Audience Presentation Stage
-          </button>
-          <button id="tabBtnWinners" onclick="setHostSubTab('winners')" class="px-4 py-2 rounded-lg font-semibold text-sm transition bg-cssoNavyLight text-slate-200 hover:text-white">
-            <i class="fa-solid fa-trophy mr-1.5"></i> Winners Log
-          </button>
-        </div>
+      <!-- SUB-TAB 1: AUDIENCE STAGE (MAIN DEFAULT PRESENTATION SCREEN) -->
+      <div id="hostSubTabStage" class="space-y-6">
+        <div class="bg-cssoNavyDark p-6 md:p-8 rounded-2xl border-2 border-cssoNavyLight shadow-2xl relative min-h-[580px] flex flex-col justify-between">
 
-        <div class="flex items-center space-x-3">
-          <button onclick="testAudio()" class="px-3 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition">
-            <i class="fa-solid fa-music mr-1"></i> Test Song
-          </button>
-          <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs">
-            <i class="fa-solid fa-volume-high mr-1"></i> Music On
-          </button>
-          <span id="syncStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-            <i class="fa-solid fa-circle-check mr-1"></i> Realtime Sync Active
-          </span>
-          <button onclick="wipeResponsesPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition">
-            <i class="fa-solid fa-trash-can mr-1"></i> Wipe Lobby & Game
-          </button>
+          <!-- STAGE LOBBY LAUNCH SCREEN -->
+          <div id="stageLobbyScreen" class="py-8 text-center space-y-6 my-auto">
+            <h2 class="text-3xl md:text-5xl font-extrabold text-white">Join the Live Trivia Contest</h2>
+            <p class="text-base text-slate-300 max-w-xl mx-auto">Scan the QR code below or open the browser link on your smartphone to register and compete!</p>
+
+            <div class="flex flex-col md:flex-row items-center justify-center gap-8 pt-4">
+              <div class="bg-white p-4 rounded-2xl shadow-2xl border-4 border-cssoGold flex flex-col items-center">
+                <div id="stageQrCode"></div>
+                <p class="text-xs font-extrabold text-cssoNavy mt-2 tracking-widest">SCAN TO PLAY</p>
+              </div>
+
+              <div class="text-left space-y-3 bg-cssoNavy p-6 rounded-2xl border border-cssoNavyLight max-w-xs">
+                <p class="text-xs text-slate-400 uppercase tracking-widest font-bold">Or Enter URL:</p>
+                <p id="stageUrlDisplay" class="text-xl font-black text-cssoGold break-all">shorturl.ly/u87OH</p>
+                <div class="pt-2 border-t border-cssoNavyLight flex items-center justify-between">
+                  <span class="text-xs text-slate-300">Live Attendees:</span>
+                  <span id="stageLobbyCount" class="text-2xl font-black text-emerald-400">0</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-6">
+              <button onclick="startQuestionSequence(0)" class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xl rounded-2xl shadow-2xl transition transform hover:scale-105 inline-flex items-center gap-3 border-2 border-emerald-400">
+                <i class="fa-solid fa-play"></i> Start Question #1
+              </button>
+            </div>
+          </div>
+
+          <!-- STAGE QUESTION SCREEN WITH CARTOONISH TIMER -->
+          <div id="stageQuestionScreen" class="hidden py-4 space-y-6 my-auto">
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-cssoNavy p-3.5 rounded-2xl border border-cssoNavyLight">
+              <span id="stageQNumber" class="text-base font-extrabold text-cssoGold uppercase tracking-wider">Question 1</span>
+              
+              <!-- PER-QUESTION JOIN QR BADGE -->
+              <div class="flex items-center space-x-3 bg-cssoNavyDark px-3 py-1.5 rounded-xl border border-cssoGold/40 shadow">
+                <div id="stageQuestionQrCode" class="bg-white p-0.5 rounded shadow"></div>
+                <div class="text-left">
+                  <p class="text-[10px] text-cssoGold font-extrabold uppercase tracking-wider flex items-center gap-1">
+                    <i class="fa-solid fa-qrcode"></i> Scan to Join Anytime
+                  </p>
+                  <p id="stageQnUrlDisplay" class="font-mono text-slate-300 text-[11px] font-bold">shorturl.ly/u87OH</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-3">
+                <button onclick="skipCurrentQuestion()" class="px-3 py-1.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-600 font-bold text-xs transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-forward-step"></i> Skip Question
+                </button>
+                <!-- CARTOONISH TIMER BOX -->
+                <div class="bg-cssoNavyDark px-5 py-2 rounded-2xl border-2 border-cssoGold flex items-center space-x-2 shadow-xl">
+                  <i class="fa-solid fa-clock text-cssoGold text-2xl"></i>
+                  <span id="stageTimer" class="cartoon-timer text-5xl md:text-6xl">15s</span>
+                </div>
+              </div>
+            </div>
+
+            <h2 id="stageQText" class="text-2xl md:text-3xl font-extrabold text-white leading-tight">Question Prompt Text...</h2>
+            <div id="stageOptionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"></div>
+
+            <div id="stageStatsBar" class="hidden bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold text-slate-300">
+                <span>Response Breakdown:</span>
+                <span id="stageCorrectStats" class="text-emerald-400">0 Correct (0%)</span>
+              </div>
+              <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden flex">
+                <div id="barCorrect" class="bg-emerald-500 h-full transition-all duration-500" style="width: 0%"></div>
+                <div id="barIncorrect" class="bg-rose-500 h-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="stageRandomizerScreen" class="hidden py-10 text-center space-y-6 my-auto">
+            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Round Prize Draw</span>
+            <h2 class="text-2xl md:text-4xl font-black text-white">Spinning for Eligible Winner...</h2>
+
+            <div class="max-w-md mx-auto bg-cssoNavy p-8 rounded-2xl border-2 border-cssoGold shadow-2xl relative overflow-hidden">
+              <div class="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2">Randomizer Reel</div>
+              <div id="slotDisplay" class="text-5xl font-black text-cssoGold tracking-widest py-4 slot-machine-num"># --</div>
+              <p id="slotCandidateName" class="text-sm font-semibold text-slate-300 min-h-[20px]">Drawing contestant...</p>
+            </div>
+          </div>
+
+          <!-- POST-QUESTION REVEAL & TOP 10 LEADERBOARD STAGE SCREEN -->
+          <div id="stageWinnerScreen" class="hidden py-6 space-y-6 my-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              <!-- ROUND WINNER BOX -->
+              <div class="lg:col-span-5 bg-gradient-to-b from-cssoNavyLight to-cssoNavy p-6 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-4">
+                <div class="inline-block px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs font-bold tracking-wide">
+                  🎉 Round Prize Awarded!
+                </div>
+                <div class="w-16 h-16 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-3xl shadow-lg">
+                  <i class="fa-solid fa-crown"></i>
+                </div>
+                <div>
+                  <h3 id="winnerNameDisplay" class="text-2xl md:text-3xl font-black text-white">Winner Name</h3>
+                  <p id="winnerSubDisplay" class="text-xs font-bold text-cssoGold mt-1">Player #00</p>
+                </div>
+              </div>
+
+              <!-- TOP 10 LIVE LEADERBOARD CARD -->
+              <div class="lg:col-span-7 bg-cssoNavy p-5 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-3">
+                <div class="flex items-center justify-between border-b border-cssoNavyLight pb-2">
+                  <h3 class="text-sm font-extrabold text-cssoGold flex items-center gap-2 uppercase tracking-wider">
+                    <i class="fa-solid fa-ranking-star text-base"></i> Top 10 Live Leaderboard
+                  </h3>
+                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Cumulative Standings</span>
+                </div>
+
+                <div id="stageLeaderboardList" class="space-y-1.5 max-h-[260px] overflow-y-auto custom-scrollbar pr-1"></div>
+              </div>
+            </div>
+
+            <!-- NEXT QUESTION & JUMP TO SPECIFIC QUESTION SELECTOR -->
+            <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <button id="stageNextBtn" onclick="advanceToNextQuestion()" class="px-6 py-3 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-base rounded-xl shadow-xl transition transform hover:scale-105 flex items-center gap-2">
+                Next Question <i class="fa-solid fa-arrow-right"></i>
+              </button>
+
+              <div class="flex items-center space-x-2 bg-cssoNavy px-3.5 py-2.5 rounded-xl border border-cssoNavyLight shadow-lg">
+                <label for="jumpQuestionSelect" class="text-xs font-bold text-slate-300">Jump To:</label>
+                <select id="jumpQuestionSelect" class="bg-cssoNavyDark text-xs font-bold text-cssoGold border border-cssoNavyLight rounded-lg px-2 py-1.5 focus:outline-none max-w-[180px]">
+                </select>
+                <button onclick="jumpToSelectedQuestion()" class="px-3 py-1.5 bg-cssoNavyLight hover:bg-slate-700 text-white font-bold text-xs rounded-lg border border-slate-600 transition flex items-center gap-1">
+                  <i class="fa-solid fa-share"></i> Go
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-cssoNavyLight pt-4 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+            <span>Stage Presentation View</span>
+            <div class="flex items-center space-x-2">
+              <button onclick="requestFullScreenMode()" class="px-3 py-1.5 rounded-lg bg-cssoNavyLight text-slate-200 border border-slate-600 font-bold hover:bg-slate-700 transition">
+                <i class="fa-solid fa-expand mr-1"></i> Fullscreen
+              </button>
+              <button onclick="triggerGrandPodium()" class="px-3 py-1.5 rounded-lg bg-purple-900/60 text-purple-200 border border-purple-600 font-bold hover:bg-purple-800 transition">
+                <i class="fa-solid fa-trophy mr-1"></i> Grand Podium
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- SUB-TAB 1: QUESTION BUILDER -->
-      <div id="hostSubTabBuilder" class="space-y-6">
+      <!-- SUB-TAB 2: QUESTION BUILDER -->
+      <div id="hostSubTabBuilder" class="hidden space-y-6">
         <div class="bg-cssoNavyDark p-4 rounded-xl border border-cssoNavyLight flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -230,196 +401,15 @@
           <div id="questionsList" class="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-1"></div>
         </div>
 
-        <div class="bg-gradient-to-br from-cssoNavyLight to-cssoNavyDark p-6 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-6">
-          <div>
-            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Event Launch Portal</span>
-            <h2 class="text-2xl font-extrabold text-white mt-2">Ready to Start Fresh CSSO Trivia Game?</h2>
-            <p class="text-sm text-slate-300 max-w-xl mx-auto mt-1">Launching will open presentation mode, clear previous players/scores so everyone starts fresh, and display the Join QR Code on screen.</p>
+        <div class="bg-cssoNavyDark p-5 rounded-2xl border border-cssoNavyLight space-y-4">
+          <label class="block text-xs font-semibold text-cssoGold uppercase tracking-wider text-left">Custom Join URL (Display & QR Code)</label>
+          <div class="flex gap-2">
+            <input type="text" id="joinUrlInput" value="https://shorturl.ly/u87OH" oninput="updateQrCode()" class="flex-1 bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-xs text-white focus:border-cssoGold focus:outline-none">
+            <button onclick="launchGameAndReset()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow transition">
+              <i class="fa-solid fa-play mr-1"></i> Reset Game & Open Stage
+            </button>
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto items-center bg-cssoNavyDark/80 p-5 rounded-xl border border-cssoNavyLight">
-            <div class="space-y-3">
-              <label class="block text-xs font-semibold text-cssoGold uppercase tracking-wider text-left">Custom Join URL (Display & QR Code)</label>
-              <input type="text" id="joinUrlInput" value="shorturl.ly/u87OH" oninput="updateQrCode()" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-xs text-white focus:border-cssoGold focus:outline-none">
-              
-              <div class="p-3 bg-cssoNavy rounded-lg border border-cssoNavyLight text-left flex items-center justify-between">
-                <div>
-                  <p class="text-xs text-slate-400">Connected Audience</p>
-                  <p id="lobbyPlayerCount" class="text-2xl font-black text-cssoGold">0 Players</p>
-                  <p id="lobbyDeviceCount" class="text-[11px] text-emerald-400 font-semibold">(Firebase Connected)</p>
-                </div>
-                <i class="fa-solid fa-users text-3xl text-slate-600"></i>
-              </div>
-            </div>
-
-            <div class="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-inner">
-              <div id="lobbyQrContainer" class="p-1"></div>
-              <p class="text-[10px] text-slate-600 font-semibold mt-1">Scan with Phone Camera</p>
-            </div>
-          </div>
-
-          <button onclick="launchGameAndReset()" class="w-full max-w-md mx-auto py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-lg rounded-xl shadow-xl transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
-            <i class="fa-solid fa-expand text-2xl"></i> Launch Game & Fullscreen Stage
-          </button>
-        </div>
-      </div>
-
-      <!-- SUB-TAB 2: AUDIENCE STAGE -->
-      <div id="hostSubTabStage" class="hidden space-y-6">
-        <div class="bg-cssoNavyDark p-6 md:p-8 rounded-2xl border-2 border-cssoNavyLight shadow-2xl relative min-h-[550px] flex flex-col justify-between">
-          <div class="flex items-center justify-between border-b border-cssoNavyLight pb-4">
-            <div class="flex items-center space-x-3">
-              <span id="stageBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cssoGold text-cssoNavy">Lobby Phase</span>
-              <span id="stageQProgress" class="text-xs font-bold text-slate-400">Questions: 12</span>
-            </div>
-            <div class="text-right">
-              <p class="text-xs text-slate-400">Active Audience</p>
-              <p id="stagePlayerCount" class="text-sm font-bold text-cssoGold">0 Joined</p>
-            </div>
-          </div>
-
-          <div id="stageLobbyScreen" class="py-10 text-center space-y-6 my-auto">
-            <div class="inline-block px-4 py-1.5 rounded-full bg-cssoNavyLight border border-cssoGold/40 text-cssoGold text-xs font-bold tracking-wide">
-              CSSO Event Interactive Giveaway
-            </div>
-            <h2 class="text-3xl md:text-5xl font-extrabold text-white">Join the Live Trivia Contest</h2>
-            <p class="text-base text-slate-300 max-w-xl mx-auto">Scan the QR code below or open the browser link on your smartphone to register and compete!</p>
-
-            <div class="flex flex-col md:flex-row items-center justify-center gap-8 pt-4">
-              <div class="bg-white p-4 rounded-2xl shadow-2xl border-4 border-cssoGold flex flex-col items-center">
-                <div id="stageQrCode"></div>
-                <p class="text-xs font-extrabold text-cssoNavy mt-2">SCAN TO PLAY</p>
-              </div>
-
-              <div class="text-left space-y-3 bg-cssoNavy p-6 rounded-2xl border border-cssoNavyLight max-w-xs">
-                <p class="text-xs text-slate-400 uppercase tracking-widest font-bold">Or Enter URL:</p>
-                <p id="stageUrlDisplay" class="text-lg font-black text-cssoGold break-all">profrobyn.github.io/csso/?join=true</p>
-                <div class="pt-2 border-t border-cssoNavyLight flex items-center justify-between">
-                  <span class="text-xs text-slate-300">Live Attendees:</span>
-                  <span id="stageLobbyCount" class="text-xl font-extrabold text-emerald-400">0</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="pt-6">
-              <button onclick="startQuestionSequence(0)" class="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-lg rounded-xl shadow-xl transition transform hover:scale-105 inline-flex items-center gap-3">
-                <i class="fa-solid fa-play"></i> Start Question #1
-              </button>
-            </div>
-          </div>
-
-          <!-- STAGE QUESTION SCREEN WITH INTEGRATED MINI QR JOIN CODE -->
-          <div id="stageQuestionScreen" class="hidden py-6 space-y-6 my-auto">
-            <div class="flex flex-wrap items-center justify-between gap-3 bg-cssoNavy p-3 rounded-2xl border border-cssoNavyLight">
-              <span id="stageQNumber" class="text-sm font-bold text-cssoGold uppercase tracking-wider">Question 1</span>
-              
-              <!-- PER-QUESTION JOIN QR BADGE -->
-              <div class="flex items-center space-x-3 bg-cssoNavyDark px-3 py-1.5 rounded-xl border border-cssoGold/40 shadow">
-                <div id="stageQuestionQrCode" class="bg-white p-0.5 rounded shadow"></div>
-                <div class="text-left">
-                  <p class="text-[10px] text-cssoGold font-extrabold uppercase tracking-wider flex items-center gap-1">
-                    <i class="fa-solid fa-qrcode"></i> Scan to Join Anytime
-                  </p>
-                  <p id="stageQnUrlDisplay" class="font-mono text-slate-300 text-[11px] font-bold">profrobyn.github.io/csso/?join=true</p>
-                </div>
-              </div>
-
-              <div class="flex items-center space-x-3">
-                <button onclick="skipCurrentQuestion()" class="px-3 py-1.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-600 font-bold text-xs transition flex items-center gap-1.5">
-                  <i class="fa-solid fa-forward-step"></i> Skip Question
-                </button>
-                <div class="bg-cssoNavyDark px-4 py-2 rounded-xl border border-cssoNavyLight flex items-center space-x-2">
-                  <i class="fa-solid fa-clock text-cssoGold"></i>
-                  <span id="stageTimer" class="text-xl font-black text-white">15s</span>
-                </div>
-              </div>
-            </div>
-
-            <h2 id="stageQText" class="text-2xl md:text-3xl font-extrabold text-white leading-tight">Question Prompt Text...</h2>
-            <div id="stageOptionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"></div>
-
-            <div id="stageStatsBar" class="hidden bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight space-y-2">
-              <div class="flex items-center justify-between text-xs font-bold text-slate-300">
-                <span>Response Breakdown:</span>
-                <span id="stageCorrectStats" class="text-emerald-400">0 Correct (0%)</span>
-              </div>
-              <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden flex">
-                <div id="barCorrect" class="bg-emerald-500 h-full transition-all duration-500" style="width: 0%"></div>
-                <div id="barIncorrect" class="bg-rose-500 h-full transition-all duration-500" style="width: 0%"></div>
-              </div>
-            </div>
-          </div>
-
-          <div id="stageRandomizerScreen" class="hidden py-10 text-center space-y-6 my-auto">
-            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Round Prize Draw</span>
-            <h2 class="text-2xl md:text-4xl font-black text-white">Spinning for Eligible Winner...</h2>
-
-            <div class="max-w-md mx-auto bg-cssoNavy p-8 rounded-2xl border-2 border-cssoGold shadow-2xl relative overflow-hidden">
-              <div class="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2">Randomizer Reel</div>
-              <div id="slotDisplay" class="text-5xl font-black text-cssoGold tracking-widest py-4 slot-machine-num"># --</div>
-              <p id="slotCandidateName" class="text-sm font-semibold text-slate-300 min-h-[20px]">Drawing contestant...</p>
-            </div>
-          </div>
-
-          <!-- POST-QUESTION REVEAL & TOP 10 LEADERBOARD STAGE SCREEN -->
-          <div id="stageWinnerScreen" class="hidden py-6 space-y-6 my-auto">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              <!-- ROUND WINNER BOX -->
-              <div class="lg:col-span-5 bg-gradient-to-b from-cssoNavyLight to-cssoNavy p-6 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-4">
-                <div class="inline-block px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-xs font-bold tracking-wide">
-                  🎉 Round Prize Awarded!
-                </div>
-                <div class="w-16 h-16 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-3xl shadow-lg">
-                  <i class="fa-solid fa-crown"></i>
-                </div>
-                <div>
-                  <h3 id="winnerNameDisplay" class="text-2xl md:text-3xl font-black text-white">Winner Name</h3>
-                  <p id="winnerSubDisplay" class="text-xs font-bold text-cssoGold mt-1">Player #00</p>
-                </div>
-              </div>
-
-              <!-- TOP 10 LIVE LEADERBOARD CARD -->
-              <div class="lg:col-span-7 bg-cssoNavy p-5 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-3">
-                <div class="flex items-center justify-between border-b border-cssoNavyLight pb-2">
-                  <h3 class="text-sm font-extrabold text-cssoGold flex items-center gap-2 uppercase tracking-wider">
-                    <i class="fa-solid fa-ranking-star text-base"></i> Top 10 Live Leaderboard
-                  </h3>
-                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Cumulative Standings</span>
-                </div>
-
-                <div id="stageLeaderboardList" class="space-y-1.5 max-h-[260px] overflow-y-auto custom-scrollbar pr-1"></div>
-              </div>
-            </div>
-
-            <!-- NEXT QUESTION & JUMP TO SPECIFIC QUESTION SELECTOR -->
-            <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
-              <button id="stageNextBtn" onclick="advanceToNextQuestion()" class="px-6 py-3 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-base rounded-xl shadow-xl transition transform hover:scale-105 flex items-center gap-2">
-                Next Question <i class="fa-solid fa-arrow-right"></i>
-              </button>
-
-              <div class="flex items-center space-x-2 bg-cssoNavy px-3.5 py-2.5 rounded-xl border border-cssoNavyLight shadow-lg">
-                <label for="jumpQuestionSelect" class="text-xs font-bold text-slate-300">Jump To:</label>
-                <select id="jumpQuestionSelect" class="bg-cssoNavyDark text-xs font-bold text-cssoGold border border-cssoNavyLight rounded-lg px-2 py-1.5 focus:outline-none max-w-[180px]">
-                </select>
-                <button onclick="jumpToSelectedQuestion()" class="px-3 py-1.5 bg-cssoNavyLight hover:bg-slate-700 text-white font-bold text-xs rounded-lg border border-slate-600 transition flex items-center gap-1">
-                  <i class="fa-solid fa-share"></i> Go
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="border-t border-cssoNavyLight pt-4 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
-            <span>Stage Presentation View</span>
-            <div class="flex items-center space-x-2">
-              <button onclick="requestFullScreenMode()" class="px-3 py-1.5 rounded-lg bg-cssoNavyLight text-slate-200 border border-slate-600 font-bold hover:bg-slate-700 transition">
-                <i class="fa-solid fa-expand mr-1"></i> Fullscreen
-              </button>
-              <button onclick="triggerGrandPodium()" class="px-3 py-1.5 rounded-lg bg-purple-900/60 text-purple-200 border border-purple-600 font-bold hover:bg-purple-800 transition">
-                <i class="fa-solid fa-trophy mr-1"></i> Trigger Grand Podium
-              </button>
-            </div>
-          </div>
+          <div id="lobbyQrContainer" class="hidden"></div>
         </div>
       </div>
 
@@ -487,11 +477,11 @@
           <p class="text-xs text-slate-400">You are registered! Questions will appear automatically on your screen.</p>
         </div>
 
-        <!-- TWO-COLUMN PLAYER QUESTION LAYOUT -->
+        <!-- TWO-COLUMN PLAYER QUESTION LAYOUT WITH CARTOON TIMER -->
         <div id="playerQuestionScreen" class="hidden space-y-2.5">
           <div class="flex items-center justify-between">
             <span id="playerQNum" class="text-xs font-bold text-cssoGold uppercase tracking-wider">Question 1</span>
-            <span id="playerTimer" class="text-xs font-bold bg-cssoNavy px-2.5 py-1 rounded-full border border-cssoNavyLight text-white">15s</span>
+            <span id="playerTimer" class="cartoon-timer text-3xl sm:text-4xl">15s</span>
           </div>
 
           <h3 id="playerQPrompt" class="text-xs sm:text-sm font-bold text-white leading-snug">Question text...</h3>
@@ -633,11 +623,10 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== DIRECT DIRECT RAW MP3 AUDIO STREAMING ====================
+    // ==================== DIRECT RAW MP3 AUDIO STREAMING ====================
     let isMuted = false;
     let audioUnlocked = false;
 
-    // Use GitHub direct raw endpoints so raw MP3 audio streams directly without HTML wrapping
     const QUESTION_AUDIO_URL = 'https://github.com/profrobyn/csso/raw/main/Question.mp3';
     const PODIUM_AUDIO_URL = 'https://github.com/profrobyn/csso/raw/main/Podium.mp3';
 
@@ -698,7 +687,7 @@
       const btn = document.getElementById('musicToggleBtn');
       if (btn) {
         btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark mr-1"></i> Music Off' : '<i class="fa-solid fa-volume-high mr-1"></i> Music On';
-        btn.className = isMuted ? 'px-3 py-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs' : 'px-3 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs';
+        btn.className = isMuted ? 'px-2.5 py-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs' : 'px-2.5 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs';
       }
       if (isMuted) stopBassTimerMusic();
     }
@@ -715,7 +704,7 @@
       }
     }
 
-    // ==================== DEFAULT 12 HARDCODED QUESTIONS ====================
+    // ==================== DEFAULT HARDCODED QUESTIONS ====================
     const DEFAULT_QUESTIONS = [
       { id: "question_1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Surviving Another Accreditation Visit"], correctIndex: 2, timeLimit: 15 },
       { id: "question_2", text: "How many times has the CSSO Association offered the CSSO Academy?", options: ["This was the first time.", "This was the second time.", "This was the third time.", "Lost count after the fourth coffee"], correctIndex: 0, timeLimit: 15 },
@@ -727,7 +716,7 @@
       { id: "question_8", text: "During the Belonging Under Pressure workshop, what was a key question?", options: ["Advancing equity as policies evolve", "Who took the last donut?", "Closing the digital divide", "Growing dual enrollment"], correctIndex: 0, timeLimit: 15 },
       { id: "question_9", text: "During the Meeting the Financial Aid Crisis workshop, what incident was examined?", options: ["Someone spent refunds on concert tickets", "A Cal Grant funding shortfall", "A student records system outage", "A BankMobile security incident"], correctIndex: 3, timeLimit: 15 },
       { id: "question_10", text: "During the Leading Teams While Managing Risk workshop, what was addressed?", options: ["Classified staff evaluations", "Emergency preparedness", "Title IX and compliance", "Reply-all etiquette for VPs"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_11", text: "During the Regional Action Huddles, what did participants do?", options: ["Share regional enrollment data", "Name regional next steps", "Plan the next coffee break", "Compare campus org charts"], correctIndex: 1, timeLimit: 15 },
+      { id: "question_11", text: "What was the purpose of the Regional Action Huddles?", options: ["Steal students from other campuses", "Sabotage your peers", "Help all students in the region succeed", "Get to happy hour first"], correctIndex: 2, timeLimit: 15 },
       { id: "question_12", text: "How likely are you to attend the Spring Conference?", options: ["0%", "25%", "75%", "100%"], correctIndex: 3, timeLimit: 15 }
     ];
 
@@ -766,7 +755,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v22');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v24');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -784,7 +773,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v22', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v24', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -1216,7 +1205,6 @@
         startTime: now
       });
 
-      document.getElementById('stageQProgress').textContent = `Question ${qIndex + 1} of ${questions.length}`;
       document.getElementById('stageQNumber').textContent = `Question ${qIndex + 1} of ${questions.length}`;
       document.getElementById('stageQText').textContent = q.text;
       document.getElementById('stageStatsBar').classList.add('hidden');
@@ -1429,7 +1417,7 @@
       document.getElementById('playerBadgeId').textContent = `ID: #${pId.slice(-4)}`;
       updatePlayerRankBadge();
 
-      // Immediately sync player UI to ongoing game state if joined mid-game
+      // Sync player UI to ongoing game state if joined mid-game
       roomRef.child('state').once('value', (snapshot) => {
         const state = snapshot.val();
         if (state) handlePlayerStateUpdate(state);
@@ -1599,8 +1587,6 @@
 
     function updateLobbyPlayerCounts() {
       const count = registeredPlayers.length;
-      document.getElementById('lobbyPlayerCount').textContent = `${count} Players`;
-      document.getElementById('stagePlayerCount').textContent = `${count} Joined`;
       document.getElementById('stageLobbyCount').textContent = `${count}`;
     }
 
@@ -1631,7 +1617,7 @@
       if (stageQnQr) stageQnQr.innerHTML = '';
 
       new QRCode(lobbyQr, { text: rawUrl, width: 120, height: 120 });
-      new QRCode(stageQr, { text: rawUrl, width: 180, height: 180 });
+      new QRCode(stageQr, { text: rawUrl, width: 220, height: 220 });
       if (stageQnQr) new QRCode(stageQnQr, { text: rawUrl, width: 64, height: 64 });
     }
 
@@ -1684,9 +1670,25 @@
 
     function setHostSubTab(sub) {
       ['hostSubTabBuilder', 'hostSubTabStage', 'hostSubTabWinners'].forEach(t => document.getElementById(t).classList.add('hidden'));
-      if (sub === 'builder') document.getElementById('hostSubTabBuilder').classList.remove('hidden');
-      if (sub === 'stage') document.getElementById('hostSubTabStage').classList.remove('hidden');
-      if (sub === 'winners') document.getElementById('hostSubTabWinners').classList.remove('hidden');
+      
+      const btnStage = document.getElementById('tabBtnStage');
+      const btnBuilder = document.getElementById('tabBtnBuilder');
+      const btnWinners = document.getElementById('tabBtnWinners');
+
+      [btnStage, btnBuilder, btnWinners].forEach(b => {
+        b.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition text-slate-300 hover:text-white";
+      });
+
+      if (sub === 'stage') {
+        document.getElementById('hostSubTabStage').classList.remove('hidden');
+        btnStage.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow";
+      } else if (sub === 'builder') {
+        document.getElementById('hostSubTabBuilder').classList.remove('hidden');
+        btnBuilder.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow";
+      } else if (sub === 'winners') {
+        document.getElementById('hostSubTabWinners').classList.remove('hidden');
+        btnWinners.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow";
+      }
     }
 
     function renderWinnersLog() {
