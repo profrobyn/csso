@@ -270,7 +270,7 @@
           <div class="flex items-center justify-between border-b border-cssoNavyLight pb-4">
             <div class="flex items-center space-x-3">
               <span id="stageBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cssoGold text-cssoNavy">Lobby Phase</span>
-              <span id="stageQProgress" class="text-xs font-bold text-slate-400">Questions: 14</span>
+              <span id="stageQProgress" class="text-xs font-bold text-slate-400">Questions: 12</span>
             </div>
             <div class="text-right">
               <p class="text-xs text-slate-400">Active Audience</p>
@@ -686,22 +686,20 @@
       }
     }
 
-    // ==================== DEFAULT 14 SYMPOSIUM QUESTIONS ====================
+    // ==================== DEFAULT 12 HARDCODED QUESTIONS ====================
     const DEFAULT_QUESTIONS = [
-      { id: "question_1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Building the Future Together"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_2", text: "How many times has the CSSO Association offered the CSSO Academy?", options: ["This was the first time.", "This was the second time.", "This was the third time.", "This was the fourth time."], correctIndex: 0, timeLimit: 15 },
-      { id: "question_3", text: "What was the primary takeaway from the CSSO Academy?", options: ["Participants would work with a mentor to implement a solution on their campus and present it at the Spring Conference.", "Participants would independently write a statewide policy proposal without mentor support.", "Participants would evaluate another college’s student-services division and issue recommendations.", "Participants would complete the academy without a follow-up project or presentation."], correctIndex: 0, timeLimit: 15 },
-      { id: "question_4", text: "During the Opening Welcome and CSSO Association Remarks, what had association leaders emphasized?", options: ["Competition among community college districts", "Shared leadership, student success, and collective wisdom", "Uniform organizational structures for every college", "Individual performance assessment"], correctIndex: 1, timeLimit: 15 },
-      { id: "question_5", text: "During Dr. Laurie Vázquez Scolari’s keynote, which leadership theme had been explored?", options: ["Developing effective AI tools to help all students", "Measuring vice presidents against one leadership style", "Reclaiming joy while sustaining authentic leadership", "Reducing leadership to regulatory compliance"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_6", text: "During the Belonging Under Pressure workshop, what had been addressed?", options: ["Faculty load calculation and curriculum sequencing", "Campus construction and bond oversight", "Equity, free speech, retention, and student success amid change", "Intercollegiate athletics recruitment"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_7", text: "During the Tomorrow’s Student Services workshop, what had been examined?", options: ["AI, data, emerging technology, and new forms of student support", "Historical enrollment practices", "Facilities maintenance technology", "Academic laboratory equipment"], correctIndex: 0, timeLimit: 15 },
-      { id: "question_8", text: "During the Dollars, Data, and Decisions workshop, what had been connected?", options: ["Athletic fundraising and ticket sales", "Classroom scheduling and faculty evaluation", "Budget strategy, staffing capacity, reporting, financial aid, and audit readiness", "Construction bidding and fleet replacement"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_9", text: "During the Community College League of California update, what had been the most useful executive takeaway?", options: ["Receiving a uniform solution for every district", "Understanding how statewide advocacy and policy could affect campus decisions", "Comparing vice presidents by legislative knowledge", "Better understanding of past legislation"], correctIndex: 1, timeLimit: 15 },
-      { id: "question_10", text: "During the Supporting the Whole Student workshop, what had been addressed?", options: ["Faculty hiring, curriculum, and laboratory safety", "Construction, parking, and transportation", "Basic needs, housing, mental health, wellness, equity, and access", "Athletics eligibility and team travel"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_11", text: "During the Strengthening the Student Pipeline workshop, what had been connected?", options: ["High school engagement, dual enrollment, guided pathways, and onboarding", "Post-graduation alumni relations", "Facilities planning and bond management", "Faculty contract negotiations"], correctIndex: 0, timeLimit: 15 },
-      { id: "question_12", text: "During the Leading Teams While Managing Risk workshop, what had been examined?", options: ["Classroom pedagogy and course assessment", "Athletic conference governance", "Title IX, policy, mandates, and compliance", "Capital project delivery methods"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_13", text: "During the Leadership Panel, what had best demonstrated shared wisdom?", options: ["Panelists had presented one unquestioned solution", "Participants had avoided difficult topics", "Leaders had compared approaches to common student-services challenges", "Discussion had remained theoretical"], correctIndex: 2, timeLimit: 15 },
-      { id: "question_14", text: "During the Chancellor’s Office Q&A, how had the discussion been shaped?", options: ["By a fixed presentation unrelated to audience needs", "By evaluations of participating vice presidents", "By questions submitted by CSSOs before and during the session", "By topics limited to instructional affairs"], correctIndex: 2, timeLimit: 15 }
+      { id: "question_1", text: "What was the theme of the Fall 2026 CSSO Symposium?", options: ["Leading Through Change", "Transforming Student Success", "The Wisdom We Share", "Surviving Another Accreditation Visit"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_2", text: "How many times has the CSSO Association offered the CSSO Academy?", options: ["This was the first time.", "This was the second time.", "This was the third time.", "Lost count after the fourth coffee"], correctIndex: 0, timeLimit: 15 },
+      { id: "question_3", text: "During the keynote, what did Dr. Laurie Vázquez Scolari explore?", options: ["Hiding from email until retirement", "Joy and authentic leadership", "Leading through budget cuts", "Building technology focused teams"], correctIndex: 1, timeLimit: 15 },
+      { id: "question_4", text: "During the Supporting the Whole Student workshop, what was a focus?", options: ["Early alert systems", "Free pizza solves everything", "Tutoring center redesign", "Mental health and basic needs"], correctIndex: 3, timeLimit: 15 },
+      { id: "question_5", text: "During the morning workshop on agentic AI, what was introduced?", options: ["AI that builds programs without coding", "Chatbots for answering FAQs", "AI policies for student conduct", "Robots that attend meetings for you"], correctIndex: 0, timeLimit: 15 },
+      { id: "question_6", text: "During the Dollars, Data, and Decisions workshop, what was a topic?", options: ["Finding money in the couch cushions", "Student equity plan goals", "Importance of working with your CBO", "Scholarship fundraising"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_7", text: "During The Community College League of California update, what was covered?", options: ["Accreditation standards", "Advocacy and policy updates", "Chancellor's Office data dashboards", "Best snacks in Sacramento"], correctIndex: 1, timeLimit: 15 },
+      { id: "question_8", text: "During the Belonging Under Pressure workshop, what was a key question?", options: ["Advancing equity as policies evolve", "Who took the last donut?", "Closing the digital divide", "Growing dual enrollment"], correctIndex: 0, timeLimit: 15 },
+      { id: "question_9", text: "During the Meeting the Financial Aid Crisis workshop, what incident was examined?", options: ["Someone spent refunds on concert tickets", "A Cal Grant funding shortfall", "A student records system outage", "A BankMobile security incident"], correctIndex: 3, timeLimit: 15 },
+      { id: "question_10", text: "During the Leading Teams While Managing Risk workshop, what was addressed?", options: ["Classified staff evaluations", "Emergency preparedness", "Title IX and compliance", "Reply-all etiquette for VPs"], correctIndex: 2, timeLimit: 15 },
+      { id: "question_11", text: "During the Regional Action Huddles, what did participants do?", options: ["Share regional enrollment data", "Name regional next steps", "Plan the next coffee break", "Compare campus org charts"], correctIndex: 1, timeLimit: 15 },
+      { id: "question_12", text: "How likely are you to attend the Spring Conference?", options: ["0%", "25%", "75%", "100%"], correctIndex: 3, timeLimit: 15 }
     ];
 
     let questions = [];
@@ -739,7 +737,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v19');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v21');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -757,7 +755,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v19', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v21', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
