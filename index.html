@@ -103,50 +103,14 @@
 </head>
 <body class="min-h-screen flex flex-col pb-6" onclick="unlockAudioContextOnUserGesture()">
 
-  <!-- TOP APP BAR WITH CLEAN INTEGRATED CONTROLS -->
-  <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-4 py-3 sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+  <!-- CLEAN TOP APP HEADER -->
+  <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-6 py-4 sticky top-0 z-40 flex items-center justify-between shadow-lg">
     <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-lg bg-cssoGold flex items-center justify-center text-cssoNavy font-bold text-xl shadow-md">
+      <div class="w-10 h-10 rounded-xl bg-cssoGold flex items-center justify-center text-cssoNavy font-bold text-2xl shadow-md">
         <i class="fa-solid fa-award"></i>
       </div>
       <div>
-        <h1 class="text-lg font-bold text-cssoGold leading-none">CSSO Trivia Giveaway</h1>
-      </div>
-    </div>
-
-    <!-- HOST SUB-TAB SWITCHER (CLEAN & COMPACT) -->
-    <div id="hostTabControls" class="flex items-center space-x-1.5 bg-cssoNavy p-1 rounded-xl border border-cssoNavyLight">
-      <button id="tabBtnStage" onclick="setHostSubTab('stage')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow">
-        <i class="fa-solid fa-tv mr-1"></i> Stage
-      </button>
-      <button id="tabBtnBuilder" onclick="setHostSubTab('builder')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition text-slate-300 hover:text-white">
-        <i class="fa-solid fa-list-check mr-1"></i> Questions
-      </button>
-      <button id="tabBtnWinners" onclick="setHostSubTab('winners')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition text-slate-300 hover:text-white">
-        <i class="fa-solid fa-trophy mr-1"></i> Winners Log
-      </button>
-    </div>
-
-    <!-- QUICK UTILITY CONTROLS -->
-    <div class="flex items-center space-x-2">
-      <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-2.5 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs hover:bg-emerald-900 transition">
-        <i class="fa-solid fa-volume-high mr-1"></i> Music On
-      </button>
-      <button onclick="testAudio()" class="px-2.5 py-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition hidden md:inline-flex">
-        <i class="fa-solid fa-music mr-1"></i> Test
-      </button>
-      <button onclick="wipeResponsesPrompt()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-900/50 hover:bg-rose-900 text-rose-200 border border-rose-700 transition" title="Wipe Lobby & Game">
-        <i class="fa-solid fa-trash-can"></i>
-      </button>
-
-      <!-- View Switcher -->
-      <div id="modeSwitcherNav" class="flex items-center space-x-1 bg-cssoNavy rounded-lg p-1 border border-cssoNavyLight ml-2">
-        <button id="navHostBtn" onclick="switchMainTab('host')" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-cssoGold text-cssoNavy transition">
-          <i class="fa-solid fa-desktop mr-1"></i> Host
-        </button>
-        <button id="navPlayerBtn" onclick="switchMainTab('player')" class="px-2.5 py-1 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition">
-          <i class="fa-solid fa-mobile-screen mr-1"></i> Player
-        </button>
+        <h1 class="text-xl font-black text-cssoGold tracking-wide leading-none">CSSO Trivia Giveaway</h1>
       </div>
     </div>
   </header>
@@ -160,45 +124,45 @@
     <!-- ==================== HOST / STAGE VIEW ==================== -->
     <div id="hostViewSection" class="space-y-6">
 
-      <!-- SUB-TAB 1: AUDIENCE STAGE (MAIN DEFAULT PRESENTATION SCREEN) -->
+      <!-- AUDIENCE STAGE (DIRECT CLEAN LAUNCH) -->
       <div id="hostSubTabStage" class="space-y-6">
-        <div class="bg-cssoNavyDark p-6 md:p-8 rounded-2xl border-2 border-cssoNavyLight shadow-2xl relative min-h-[580px] flex flex-col justify-between">
+        <div class="bg-cssoNavyDark p-6 md:p-10 rounded-3xl border-2 border-cssoNavyLight shadow-2xl relative min-h-[600px] flex flex-col justify-between">
 
-          <!-- STAGE LOBBY LAUNCH SCREEN -->
-          <div id="stageLobbyScreen" class="py-8 text-center space-y-6 my-auto">
-            <h2 class="text-3xl md:text-5xl font-extrabold text-white">Join the Live Trivia Contest</h2>
-            <p class="text-base text-slate-300 max-w-xl mx-auto">Scan the QR code below or open the browser link on your smartphone to register and compete!</p>
+          <!-- STAGE LOBBY SCREEN: JUMPS DIRECTLY TO JOIN INSTRUCTIONS -->
+          <div id="stageLobbyScreen" class="py-12 text-center space-y-8 my-auto">
+            <h2 class="text-4xl md:text-6xl font-black text-white tracking-tight">Join the Live Trivia Contest</h2>
+            <p class="text-lg text-slate-300 max-w-xl mx-auto">Scan the QR code below or open the browser link on your smartphone to register and compete!</p>
 
-            <div class="flex flex-col md:flex-row items-center justify-center gap-8 pt-4">
-              <div class="bg-white p-4 rounded-2xl shadow-2xl border-4 border-cssoGold flex flex-col items-center">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-10 pt-4">
+              <div class="bg-white p-5 rounded-3xl shadow-2xl border-4 border-cssoGold flex flex-col items-center">
                 <div id="stageQrCode"></div>
-                <p class="text-xs font-extrabold text-cssoNavy mt-2 tracking-widest">SCAN TO PLAY</p>
+                <p class="text-sm font-extrabold text-cssoNavy mt-3 tracking-widest">SCAN TO PLAY</p>
               </div>
 
-              <div class="text-left space-y-3 bg-cssoNavy p-6 rounded-2xl border border-cssoNavyLight max-w-xs">
+              <div class="text-left space-y-4 bg-cssoNavy p-8 rounded-3xl border border-cssoNavyLight max-w-xs shadow-xl">
                 <p class="text-xs text-slate-400 uppercase tracking-widest font-bold">Or Enter URL:</p>
-                <p id="stageUrlDisplay" class="text-xl font-black text-cssoGold break-all">shorturl.ly/u87OH</p>
-                <div class="pt-2 border-t border-cssoNavyLight flex items-center justify-between">
-                  <span class="text-xs text-slate-300">Live Attendees:</span>
+                <p id="stageUrlDisplay" class="text-2xl font-black text-cssoGold break-all">shorturl.ly/u87OH</p>
+                <div class="pt-3 border-t border-cssoNavyLight flex items-center justify-between">
+                  <span class="text-xs text-slate-300 font-semibold">Live Attendees:</span>
                   <span id="stageLobbyCount" class="text-2xl font-black text-emerald-400">0</span>
                 </div>
               </div>
             </div>
 
-            <div class="pt-6">
-              <button onclick="startQuestionSequence(0)" class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xl rounded-2xl shadow-2xl transition transform hover:scale-105 inline-flex items-center gap-3 border-2 border-emerald-400">
-                <i class="fa-solid fa-play"></i> Start Question #1
+            <div class="pt-8">
+              <button onclick="startQuestionSequence(0)" class="px-12 py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-2xl rounded-2xl shadow-2xl transition transform hover:scale-105 inline-flex items-center gap-4 border-2 border-emerald-400">
+                <i class="fa-solid fa-play text-2xl"></i> Start Question #1
               </button>
             </div>
           </div>
 
           <!-- STAGE QUESTION SCREEN WITH CARTOONISH TIMER -->
           <div id="stageQuestionScreen" class="hidden py-4 space-y-6 my-auto">
-            <div class="flex flex-wrap items-center justify-between gap-3 bg-cssoNavy p-3.5 rounded-2xl border border-cssoNavyLight">
-              <span id="stageQNumber" class="text-base font-extrabold text-cssoGold uppercase tracking-wider">Question 1</span>
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-cssoNavy p-4 rounded-2xl border border-cssoNavyLight">
+              <span id="stageQNumber" class="text-lg font-extrabold text-cssoGold uppercase tracking-wider">Question 1</span>
               
               <!-- PER-QUESTION JOIN QR BADGE -->
-              <div class="flex items-center space-x-3 bg-cssoNavyDark px-3 py-1.5 rounded-xl border border-cssoGold/40 shadow">
+              <div class="flex items-center space-x-3 bg-cssoNavyDark px-3.5 py-2 rounded-xl border border-cssoGold/40 shadow">
                 <div id="stageQuestionQrCode" class="bg-white p-0.5 rounded shadow"></div>
                 <div class="text-left">
                   <p class="text-[10px] text-cssoGold font-extrabold uppercase tracking-wider flex items-center gap-1">
@@ -209,18 +173,18 @@
               </div>
 
               <div class="flex items-center space-x-3">
-                <button onclick="skipCurrentQuestion()" class="px-3 py-1.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-600 font-bold text-xs transition flex items-center gap-1.5">
+                <button onclick="skipCurrentQuestion()" class="px-3.5 py-2 rounded-xl bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-600 font-bold text-xs transition flex items-center gap-1.5">
                   <i class="fa-solid fa-forward-step"></i> Skip Question
                 </button>
                 <!-- CARTOONISH TIMER BOX -->
-                <div class="bg-cssoNavyDark px-5 py-2 rounded-2xl border-2 border-cssoGold flex items-center space-x-2 shadow-xl">
+                <div class="bg-cssoNavyDark px-6 py-2 rounded-2xl border-2 border-cssoGold flex items-center space-x-2 shadow-xl">
                   <i class="fa-solid fa-clock text-cssoGold text-2xl"></i>
                   <span id="stageTimer" class="cartoon-timer text-5xl md:text-6xl">15s</span>
                 </div>
               </div>
             </div>
 
-            <h2 id="stageQText" class="text-2xl md:text-3xl font-extrabold text-white leading-tight">Question Prompt Text...</h2>
+            <h2 id="stageQText" class="text-2xl md:text-4xl font-extrabold text-white leading-tight">Question Prompt Text...</h2>
             <div id="stageOptionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"></div>
 
             <div id="stageStatsBar" class="hidden bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight space-y-2">
@@ -305,126 +269,6 @@
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- SUB-TAB 2: QUESTION BUILDER -->
-      <div id="hostSubTabBuilder" class="hidden space-y-6">
-        <div class="bg-cssoNavyDark p-4 rounded-xl border border-cssoNavyLight flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-file-code text-cssoGold"></i> Quiz Question Bank
-            </h2>
-            <p class="text-xs text-slate-400">Add, edit, reorder questions, or import/export JSON backups.</p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="exportJSONFile()" class="px-3 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg border border-slate-600 transition flex items-center gap-1.5">
-              <i class="fa-solid fa-download text-cssoGold"></i> Export JSON File
-            </button>
-            <label class="px-3 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg border border-slate-600 transition cursor-pointer flex items-center gap-1.5">
-              <i class="fa-solid fa-upload text-cssoGold"></i> Import JSON File
-              <input type="file" id="jsonFileInput" accept=".json" onchange="importJSONFile(event)" class="hidden">
-            </label>
-            <button onclick="openRawJSONModal()" class="px-3 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg border border-slate-600 transition flex items-center gap-1.5">
-              <i class="fa-solid fa-code text-cssoGold"></i> Paste JSON Text
-            </button>
-            <button onclick="resetDefaultQuestions()" class="px-3 py-2 bg-amber-950/40 hover:bg-amber-900/60 text-amber-200 font-semibold text-xs rounded-lg border border-amber-700 transition flex items-center gap-1.5">
-              <i class="fa-solid fa-rotate-left"></i> Reset Defaults
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-cssoNavyDark p-5 rounded-xl border border-cssoNavyLight space-y-4">
-          <h3 id="formTitle" class="text-md font-bold text-cssoGold flex items-center gap-2">
-            <i class="fa-solid fa-plus-circle"></i> Add New Trivia Question
-          </h3>
-          <input type="hidden" id="editQuestionIndex" value="-1">
-
-          <div>
-            <label class="block text-xs text-slate-300 font-medium mb-1">Question Prompt Text</label>
-            <textarea id="qText" rows="2" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-3 text-sm text-white focus:border-cssoGold focus:outline-none" placeholder="Enter trivia question prompt..."></textarea>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs text-slate-300 font-medium mb-1">Option A</label>
-              <input type="text" id="qOpt0" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-sm text-white focus:border-cssoGold focus:outline-none" placeholder="Option A text">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 font-medium mb-1">Option B</label>
-              <input type="text" id="qOpt1" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-sm text-white focus:border-cssoGold focus:outline-none" placeholder="Option B text">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 font-medium mb-1">Option C</label>
-              <input type="text" id="qOpt2" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-sm text-white focus:border-cssoGold focus:outline-none" placeholder="Option C text">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 font-medium mb-1">Option D</label>
-              <input type="text" id="qOpt3" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-sm text-white focus:border-cssoGold focus:outline-none" placeholder="Option D text">
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
-            <div class="flex items-center space-x-4">
-              <div>
-                <label class="block text-xs text-slate-300 font-medium mb-1">Correct Choice</label>
-                <select id="qCorrect" class="bg-cssoNavy border border-cssoNavyLight rounded-lg px-3 py-2 text-sm text-white focus:border-cssoGold focus:outline-none">
-                  <option value="0">Option A</option>
-                  <option value="1">Option B</option>
-                  <option value="2">Option C</option>
-                  <option value="3">Option D</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs text-slate-300 font-medium mb-1">Timer (Seconds)</label>
-                <input type="number" id="qTimer" value="15" min="5" max="120" class="w-24 bg-cssoNavy border border-cssoNavyLight rounded-lg px-3 py-2 text-sm text-white focus:border-cssoGold focus:outline-none">
-              </div>
-            </div>
-
-            <div class="flex items-center space-x-2">
-              <button id="cancelEditBtn" onclick="cancelQuestionEdit()" class="hidden px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">Cancel</button>
-              <button onclick="saveQuestionFromForm()" class="px-5 py-2 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-sm rounded-lg transition shadow-md">
-                <i class="fa-solid fa-save mr-1"></i> Save Question
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-cssoNavyDark p-5 rounded-xl border border-cssoNavyLight space-y-3">
-          <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
-            <h3 class="text-md font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-layer-group text-cssoGold"></i> Questions List (<span id="qCountText">0</span>)
-            </h3>
-            <p class="text-xs text-slate-400">Use ⬆️ / ⬇️ to reorder questions for the live presentation.</p>
-          </div>
-          <div id="questionsList" class="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-1"></div>
-        </div>
-
-        <div class="bg-cssoNavyDark p-5 rounded-2xl border border-cssoNavyLight space-y-4">
-          <label class="block text-xs font-semibold text-cssoGold uppercase tracking-wider text-left">Custom Join URL (Display & QR Code)</label>
-          <div class="flex gap-2">
-            <input type="text" id="joinUrlInput" value="https://shorturl.ly/u87OH" oninput="updateQrCode()" class="flex-1 bg-cssoNavy border border-cssoNavyLight rounded-lg p-2.5 text-xs text-white focus:border-cssoGold focus:outline-none">
-            <button onclick="launchGameAndReset()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow transition">
-              <i class="fa-solid fa-play mr-1"></i> Reset Game & Open Stage
-            </button>
-          </div>
-          <div id="lobbyQrContainer" class="hidden"></div>
-        </div>
-      </div>
-
-      <!-- SUB-TAB 3: WINNERS LOG -->
-      <div id="hostSubTabWinners" class="hidden bg-cssoNavyDark p-6 rounded-xl border border-cssoNavyLight space-y-4">
-        <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-trophy text-cssoGold"></i> Individual Round Winners Log
-          </h3>
-          <button onclick="triggerGrandPodium()" class="px-4 py-2 bg-cssoGold text-cssoNavy font-bold text-xs rounded-lg shadow transition">
-            <i class="fa-solid fa-award mr-1"></i> View Final Top 3 Podium
-          </button>
-        </div>
-        <div id="winnersLogContainer" class="space-y-2">
-          <p class="text-xs text-slate-400 italic">No round winners awarded yet.</p>
         </div>
       </div>
 
@@ -536,31 +380,6 @@
 
   </main>
 
-  <!-- RAW JSON PASTE MODAL -->
-  <div id="jsonModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-cssoNavyDark max-w-2xl w-full p-6 rounded-2xl border border-cssoNavyLight shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-code text-cssoGold"></i> Raw JSON Question Data
-        </h3>
-        <button onclick="closeRawJSONModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <p class="text-xs text-slate-300">View or paste your raw JSON question array below:</p>
-      <textarea id="rawJsonTextArea" rows="10" class="w-full bg-cssoNavy border border-cssoNavyLight rounded-xl p-3 text-xs font-mono text-emerald-400 focus:border-cssoGold focus:outline-none"></textarea>
-
-      <div class="flex items-center justify-between pt-2">
-        <button onclick="copyRawJSONText()" class="px-3 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg transition">
-          <i class="fa-solid fa-copy mr-1"></i> Copy to Clipboard
-        </button>
-        <div class="flex items-center space-x-2">
-          <button onclick="closeRawJSONModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs rounded-lg transition">Cancel</button>
-          <button onclick="applyRawJSONText()" class="px-4 py-2 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-bold text-xs rounded-lg transition">Apply JSON</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- GRAND PODIUM MODAL -->
   <div id="podiumModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-cssoNavyDark max-w-xl w-full p-6 md:p-8 rounded-2xl border-2 border-cssoGold shadow-2xl space-y-6 text-center relative overflow-hidden">
@@ -646,13 +465,6 @@
       }
     }
 
-    function testAudio() {
-      audioUnlocked = true;
-      if (isMuted) toggleMusicMute();
-      playBassTimerMusic();
-      setTimeout(() => { stopBassTimerMusic(); }, 3500);
-    }
-
     function playBassTimerMusic() {
       if (isMuted) return;
       podiumAudio.pause();
@@ -680,16 +492,6 @@
     function stopBassTimerMusic() {
       questionAudio.pause();
       podiumAudio.pause();
-    }
-
-    function toggleMusicMute() {
-      isMuted = !isMuted;
-      const btn = document.getElementById('musicToggleBtn');
-      if (btn) {
-        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark mr-1"></i> Music Off' : '<i class="fa-solid fa-volume-high mr-1"></i> Music On';
-        btn.className = isMuted ? 'px-2.5 py-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs' : 'px-2.5 py-1.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs';
-      }
-      if (isMuted) stopBassTimerMusic();
     }
 
     // ==================== FULL-SCREEN PRESENTATION MODE ====================
@@ -741,12 +543,9 @@
       if (isPlayerJoin) {
         isHost = false;
         switchMainTab('player');
-        const navHostBtn = document.getElementById('navHostBtn');
-        if (navHostBtn) navHostBtn.classList.add('hidden');
       }
 
       loadSavedQuestions();
-      renderQuestionsList();
       populateJumpQuestionDropdown();
       updateQrCode();
       initFirebaseSync();
@@ -755,7 +554,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v24');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v25');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -773,7 +572,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v24', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v25', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
@@ -834,63 +633,6 @@
       return normalized.length > 0 ? normalized : null;
     }
 
-    // ==================== QUESTION BUILDER CRUD ====================
-    function renderQuestionsList() {
-      const container = document.getElementById('questionsList');
-      const countText = document.getElementById('qCountText');
-      if (countText) countText.textContent = questions.length;
-
-      if (!container) return;
-      container.innerHTML = '';
-
-      if (questions.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 italic py-4 text-center">No questions in bank. Click "Reset Defaults" or "Add New Question".</p>`;
-        return;
-      }
-
-      questions.forEach((q, idx) => {
-        const card = document.createElement('div');
-        card.className = "bg-cssoNavy p-4 rounded-xl border border-cssoNavyLight flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-md hover:border-slate-600 transition";
-        
-        const optionsHtml = q.options.map((opt, oIdx) => `
-          <span class="text-[11px] px-2 py-0.5 rounded ${oIdx === q.correctIndex ? 'bg-emerald-950 text-emerald-300 border border-emerald-600 font-bold' : 'bg-cssoNavyDark text-slate-400'}">
-            ${String.fromCharCode(65 + oIdx)}: ${escapeHtml(opt)}
-          </span>
-        `).join(' ');
-
-        card.innerHTML = `
-          <div class="space-y-1.5 flex-1">
-            <div class="flex items-center space-x-2">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cssoGold text-cssoNavy">#${idx + 1}</span>
-              <span class="text-xs font-semibold text-slate-400"><i class="fa-solid fa-clock mr-1"></i>${q.timeLimit}s</span>
-            </div>
-            <h4 class="text-sm font-bold text-white leading-snug">${escapeHtml(q.text)}</h4>
-            <div class="flex flex-wrap gap-1.5 pt-1">
-              ${optionsHtml}
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-1.5 self-end md:self-center">
-            <button onclick="moveQuestion(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 p-1.5 text-slate-500"' : 'class="p-1.5 text-slate-300 hover:text-cssoGold transition"'} title="Move Up">
-              <i class="fa-solid fa-arrow-up"></i>
-            </button>
-            <button onclick="moveQuestion(${idx}, 1)" ${idx === questions.length - 1 ? 'disabled class="opacity-30 p-1.5 text-slate-500"' : 'class="p-1.5 text-slate-300 hover:text-cssoGold transition"'} title="Move Down">
-              <i class="fa-solid fa-arrow-down"></i>
-            </button>
-            <button onclick="editQuestion(${idx})" class="p-1.5 text-slate-300 hover:text-emerald-400 transition" title="Edit">
-              <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteQuestion(${idx})" class="p-1.5 text-slate-300 hover:text-rose-400 transition" title="Delete">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-      populateJumpQuestionDropdown();
-    }
-
     function populateJumpQuestionDropdown() {
       const select = document.getElementById('jumpQuestionSelect');
       if (!select) return;
@@ -911,168 +653,6 @@
       const targetIdx = parseInt(select.value, 10);
       if (!isNaN(targetIdx) && targetIdx >= 0 && targetIdx < questions.length) {
         startQuestionSequence(targetIdx);
-      }
-    }
-
-    function saveQuestionFromForm() {
-      const qText = document.getElementById('qText').value.trim();
-      const opt0 = document.getElementById('qOpt0').value.trim();
-      const opt1 = document.getElementById('qOpt1').value.trim();
-      const opt2 = document.getElementById('qOpt2').value.trim();
-      const opt3 = document.getElementById('qOpt3').value.trim();
-      const correctVal = parseInt(document.getElementById('qCorrect').value, 10);
-      const timerVal = parseInt(document.getElementById('qTimer').value, 10) || 15;
-      const editIdx = parseInt(document.getElementById('editQuestionIndex').value, 10);
-
-      if (!qText || !opt0 || !opt1 || !opt2 || !opt3) {
-        alert("Please fill in the question prompt and all 4 options.");
-        return;
-      }
-
-      const qObj = {
-        id: editIdx >= 0 ? questions[editIdx].id : `q_${Date.now()}`,
-        text: qText,
-        options: [opt0, opt1, opt2, opt3],
-        correctIndex: correctVal,
-        timeLimit: timerVal
-      };
-
-      if (editIdx >= 0 && editIdx < questions.length) {
-        questions[editIdx] = qObj;
-      } else {
-        questions.push(qObj);
-      }
-
-      saveQuestionsToStorage();
-      resetForm();
-      renderQuestionsList();
-    }
-
-    function editQuestion(idx) {
-      const q = questions[idx];
-      if (!q) return;
-
-      document.getElementById('editQuestionIndex').value = idx;
-      document.getElementById('qText').value = q.text;
-      document.getElementById('qOpt0').value = q.options[0] || '';
-      document.getElementById('qOpt1').value = q.options[1] || '';
-      document.getElementById('qOpt2').value = q.options[2] || '';
-      document.getElementById('qOpt3').value = q.options[3] || '';
-      document.getElementById('qCorrect').value = q.correctIndex;
-      document.getElementById('qTimer').value = q.timeLimit;
-
-      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Question #${idx + 1}`;
-      document.getElementById('cancelEditBtn').classList.remove('hidden');
-      window.scrollTo({ top: 100, behavior: 'smooth' });
-    }
-
-    function cancelQuestionEdit() { resetForm(); }
-
-    function resetForm() {
-      document.getElementById('editQuestionIndex').value = "-1";
-      document.getElementById('qText').value = "";
-      document.getElementById('qOpt0').value = "";
-      document.getElementById('qOpt1').value = "";
-      document.getElementById('qOpt2').value = "";
-      document.getElementById('qOpt3').value = "";
-      document.getElementById('qCorrect').value = "0";
-      document.getElementById('qTimer').value = "15";
-
-      document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-plus-circle"></i> Add New Trivia Question`;
-      document.getElementById('cancelEditBtn').classList.add('hidden');
-    }
-
-    function deleteQuestion(idx) {
-      if (confirm(`Delete Question #${idx + 1}?`)) {
-        questions.splice(idx, 1);
-        saveQuestionsToStorage();
-        renderQuestionsList();
-      }
-    }
-
-    function moveQuestion(idx, direction) {
-      const targetIdx = idx + direction;
-      if (targetIdx < 0 || targetIdx >= questions.length) return;
-      const temp = questions[idx];
-      questions[idx] = questions[targetIdx];
-      questions[targetIdx] = temp;
-      saveQuestionsToStorage();
-      renderQuestionsList();
-    }
-
-    // ==================== FAIL-SAFE JSON IMPORT / EXPORT ====================
-    function exportJSONFile() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `csso_trivia_questions_${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    function importJSONFile(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const rawText = e.target.result;
-          const normalized = parseAndNormalizeQuestions(rawText);
-          
-          if (normalized && normalized.length > 0) {
-            questions = normalized;
-            saveQuestionsToStorage();
-            renderQuestionsList();
-            alert(`🎉 Successfully loaded ${questions.length} questions from ${file.name}!`);
-          } else {
-            alert(`⚠️ Upload Error: Unable to read valid questions from "${file.name}". Existing questions were kept.`);
-          }
-        } catch (err) {
-          alert(`⚠️ Upload Error: ${err.message}`);
-        }
-      };
-      reader.onerror = function() {
-        alert("⚠️ Failed to read the selected file.");
-      };
-      reader.readAsText(file, 'UTF-8');
-      event.target.value = '';
-    }
-
-    function openRawJSONModal() {
-      document.getElementById('rawJsonTextArea').value = JSON.stringify(questions, null, 2);
-      document.getElementById('jsonModal').classList.remove('hidden');
-    }
-
-    function closeRawJSONModal() { document.getElementById('jsonModal').classList.add('hidden'); }
-
-    function copyRawJSONText() {
-      const area = document.getElementById('rawJsonTextArea');
-      area.select();
-      navigator.clipboard.writeText(area.value);
-      alert("JSON copied to clipboard!");
-    }
-
-    function applyRawJSONText() {
-      const val = document.getElementById('rawJsonTextArea').value;
-      const normalized = parseAndNormalizeQuestions(val);
-      if (normalized && normalized.length > 0) {
-        questions = normalized;
-        saveQuestionsToStorage();
-        renderQuestionsList();
-        closeRawJSONModal();
-        alert(`🎉 Successfully applied ${questions.length} questions!`);
-      } else {
-        alert("⚠️ Invalid JSON syntax or empty structure. Existing questions were retained.");
-      }
-    }
-
-    function resetDefaultQuestions() {
-      if (confirm("Reset question bank to Fall 2026 CSSO Symposium default trivia questions?")) {
-        questions = parseAndNormalizeQuestions(DEFAULT_QUESTIONS);
-        saveQuestionsToStorage();
-        renderQuestionsList();
       }
     }
 
@@ -1158,29 +738,6 @@
       }
     }
 
-    // COMPLETE LOBBY & PLAYER CLEARING FOR FRESH GAME START
-    function launchGameAndReset() {
-      stopBassTimerMusic();
-
-      roomRef.child('players').remove();
-      roomRef.child('responses').remove();
-      roomRef.child('winners').remove();
-      roomRef.child('waves').remove();
-
-      registeredPlayers = [];
-      currentResponses = [];
-      roundWinnersLog = [];
-      renderWinnersLog();
-      updateLobbyPlayerCounts();
-
-      roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
-
-      requestFullScreenMode();
-
-      setHostSubTab('stage');
-      showStageScreen('lobby');
-    }
-
     function startQuestionSequence(qIndex) {
       unlockAudioContextOnUserGesture();
       if (qIndex < 0 || qIndex >= questions.length) {
@@ -1205,7 +762,9 @@
         startTime: now
       });
 
-      document.getElementById('stageQNumber').textContent = `Question ${qIndex + 1} of ${questions.length}`;
+      const qNumEl = document.getElementById('stageQNumber');
+      if (qNumEl) qNumEl.textContent = `Question ${qIndex + 1} of ${questions.length}`;
+
       document.getElementById('stageQText').textContent = q.text;
       document.getElementById('stageStatsBar').classList.add('hidden');
 
@@ -1324,7 +883,6 @@
           });
 
           roundWinnersLog.push({ qIndex: currentQIndex, winnerPlayer: finalWinner });
-          renderWinnersLog();
           showWinnerCard(finalWinner);
         }
       }, 100);
@@ -1394,7 +952,6 @@
       }
     }
 
-    // STRICT NAME REQUIREMENT ON REGISTER - ALLOW LATE JOINING ANYTIME
     function registerPlayer() {
       const nameInput = document.getElementById('playerNameInput');
       const name = nameInput ? nameInput.value.trim() : '';
@@ -1417,7 +974,6 @@
       document.getElementById('playerBadgeId').textContent = `ID: #${pId.slice(-4)}`;
       updatePlayerRankBadge();
 
-      // Sync player UI to ongoing game state if joined mid-game
       roomRef.child('state').once('value', (snapshot) => {
         const state = snapshot.val();
         if (state) handlePlayerStateUpdate(state);
@@ -1445,7 +1001,6 @@
       document.getElementById('playerLockedScreen').classList.remove('hidden');
     }
 
-    // ==================== DYNAMIC KUDOS & ENCOURAGEMENT GENERATOR ====================
     function handlePlayerStateUpdate(state) {
       const waitScrn = document.getElementById('playerWaitingScreen');
       const qScrn = document.getElementById('playerQuestionScreen');
@@ -1587,12 +1142,14 @@
 
     function updateLobbyPlayerCounts() {
       const count = registeredPlayers.length;
-      document.getElementById('stageLobbyCount').textContent = `${count}`;
+      const stageCountEl = document.getElementById('stageLobbyCount');
+      if (stageCountEl) stageCountEl.textContent = `${count}`;
     }
 
     function showStageScreen(screenName) {
       ['stageLobbyScreen', 'stageQuestionScreen', 'stageRandomizerScreen', 'stageWinnerScreen'].forEach(s => {
-        document.getElementById(s).classList.add('hidden');
+        const el = document.getElementById(s);
+        if (el) el.classList.add('hidden');
       });
       if (screenName === 'lobby') document.getElementById('stageLobbyScreen').classList.remove('hidden');
       if (screenName === 'question') document.getElementById('stageQuestionScreen').classList.remove('hidden');
@@ -1601,23 +1158,22 @@
     }
 
     function updateQrCode() {
-      const rawUrl = document.getElementById('joinUrlInput').value.trim();
-      const lobbyQr = document.getElementById('lobbyQrContainer');
+      const rawUrl = "https://shorturl.ly/u87OH";
       const stageQr = document.getElementById('stageQrCode');
       const stageQnQr = document.getElementById('stageQuestionQrCode');
 
       const urlDisplay = rawUrl.replace('https://', '');
-      document.getElementById('stageUrlDisplay').textContent = urlDisplay;
+      const urlDispEl = document.getElementById('stageUrlDisplay');
+      if (urlDispEl) urlDispEl.textContent = urlDisplay;
+
       if (document.getElementById('stageQnUrlDisplay')) {
         document.getElementById('stageQnUrlDisplay').textContent = urlDisplay;
       }
 
-      lobbyQr.innerHTML = ''; 
-      stageQr.innerHTML = '';
+      if (stageQr) stageQr.innerHTML = '';
       if (stageQnQr) stageQnQr.innerHTML = '';
 
-      new QRCode(lobbyQr, { text: rawUrl, width: 120, height: 120 });
-      new QRCode(stageQr, { text: rawUrl, width: 220, height: 220 });
+      if (stageQr) new QRCode(stageQr, { text: rawUrl, width: 220, height: 220 });
       if (stageQnQr) new QRCode(stageQnQr, { text: rawUrl, width: 64, height: 64 });
     }
 
@@ -1640,23 +1196,6 @@
       stopBassTimerMusic();
       document.getElementById('podiumModal').classList.add('hidden');
     }
-    
-    function wipeResponsesPrompt() { 
-      if (confirm("Wipe all connected players, response history, and winners for a fresh game?")) {
-        roomRef.child('players').remove();
-        roomRef.child('responses').remove();
-        roomRef.child('winners').remove();
-        roomRef.child('waves').remove();
-
-        registeredPlayers = [];
-        currentResponses = [];
-        roundWinnersLog = [];
-        renderWinnersLog();
-        updateLobbyPlayerCounts();
-
-        roomRef.child('state').set({ activeGameState: 'LOBBY', currentQIndex: 0 });
-      }
-    }
 
     function switchMainTab(tab) {
       if (tab === 'host') {
@@ -1666,39 +1205,6 @@
         document.getElementById('hostViewSection').classList.add('hidden');
         document.getElementById('playerViewSection').classList.remove('hidden');
       }
-    }
-
-    function setHostSubTab(sub) {
-      ['hostSubTabBuilder', 'hostSubTabStage', 'hostSubTabWinners'].forEach(t => document.getElementById(t).classList.add('hidden'));
-      
-      const btnStage = document.getElementById('tabBtnStage');
-      const btnBuilder = document.getElementById('tabBtnBuilder');
-      const btnWinners = document.getElementById('tabBtnWinners');
-
-      [btnStage, btnBuilder, btnWinners].forEach(b => {
-        b.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition text-slate-300 hover:text-white";
-      });
-
-      if (sub === 'stage') {
-        document.getElementById('hostSubTabStage').classList.remove('hidden');
-        btnStage.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow";
-      } else if (sub === 'builder') {
-        document.getElementById('hostSubTabBuilder').classList.remove('hidden');
-        btnBuilder.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow";
-      } else if (sub === 'winners') {
-        document.getElementById('hostSubTabWinners').classList.remove('hidden');
-        btnWinners.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition bg-cssoGold text-cssoNavy shadow";
-      }
-    }
-
-    function renderWinnersLog() {
-      const container = document.getElementById('winnersLogContainer');
-      container.innerHTML = roundWinnersLog.map(log => `
-        <div class="p-3 bg-cssoNavy rounded-lg border border-cssoNavyLight flex items-center justify-between text-xs">
-          <span class="text-white font-semibold">Q#${log.qIndex + 1}: ${escapeHtml(log.winnerPlayer.name)}</span>
-          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600">Winner</span>
-        </div>
-      `).join('');
     }
 
     function escapeHtml(str) { return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
