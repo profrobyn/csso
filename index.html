@@ -365,12 +365,52 @@
           </button>
         </div>
 
-        <div id="playerWaitingScreen" class="py-8 text-center space-y-3">
-          <div class="w-10 h-10 mx-auto rounded-full bg-cssoNavyLight text-cssoGold flex items-center justify-center text-lg animate-spin">
-            <i class="fa-solid fa-spinner"></i>
+        <!-- REVAMPED PLAYFUL & COLORFUL "WAITING FOR HOST" SCREEN -->
+        <div id="playerWaitingScreen" class="py-6 px-4 text-center space-y-4 bg-gradient-to-b from-cssoNavyLight/90 to-cssoNavyDark rounded-2xl border-2 border-cssoGold/50 shadow-2xl relative overflow-hidden">
+          <!-- Ambient Glow Blobs -->
+          <div class="absolute -top-10 -left-10 w-24 h-24 bg-cssoGold/20 rounded-full blur-xl pointer-events-none"></div>
+          <div class="absolute -bottom-10 -right-10 w-24 h-24 bg-emerald-500/20 rounded-full blur-xl pointer-events-none"></div>
+
+          <!-- Animated Bouncing Gamepad Mascot -->
+          <div class="relative inline-block">
+            <div class="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-cssoGold via-amber-500 to-amber-600 text-cssoNavy flex items-center justify-center text-4xl font-extrabold shadow-lg shadow-cssoGold/30 animate-bounce">
+              <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <span class="absolute -top-1 -right-1 flex h-4 w-4">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+            </span>
           </div>
-          <h3 class="text-base font-bold text-white">Waiting for Host...</h3>
-          <p class="text-xs text-slate-400">You are registered! Questions will appear automatically on your screen.</p>
+
+          <div>
+            <h3 class="text-2xl font-black text-cssoGold tracking-wider uppercase drop-shadow-md" style="font-family: 'Luckiest Guy', cursive;">You're Locked In! 🚀</h3>
+            <p class="text-xs font-bold text-slate-200 mt-1">Waiting for host to launch the question...</p>
+          </div>
+
+          <!-- Colorful Mini Game-Tip Badges -->
+          <div class="grid grid-cols-2 gap-2 text-left pt-1">
+            <div class="bg-cssoNavy/80 p-2.5 rounded-xl border border-cssoGold/30 flex items-center space-x-2 shadow">
+              <span class="text-lg shrink-0">⚡</span>
+              <div>
+                <p class="text-[10px] font-black text-cssoGold uppercase leading-none">Speed = Points</p>
+                <p class="text-[9px] text-slate-300 font-medium leading-tight mt-0.5">Faster answers earn extra bonus points!</p>
+              </div>
+            </div>
+            <div class="bg-cssoNavy/80 p-2.5 rounded-xl border border-emerald-500/30 flex items-center space-x-2 shadow">
+              <span class="text-lg shrink-0">🎟️</span>
+              <div>
+                <p class="text-[10px] font-black text-emerald-400 uppercase leading-none">Prize Lottery</p>
+                <p class="text-[9px] text-slate-300 font-medium leading-tight mt-0.5">Correct answers enter live prize draws!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Animated Live Connection Status Footer -->
+          <div class="pt-1 flex items-center justify-center space-x-2 text-xs font-extrabold text-slate-400">
+            <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+            <span class="tracking-widest uppercase text-[10px] text-emerald-400">Live Game Stream Active</span>
+            <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+          </div>
         </div>
 
         <!-- TWO-COLUMN PLAYER QUESTION LAYOUT WITH CARTOON TIMER -->
@@ -781,7 +821,7 @@
     // ==================== STORAGE & SAFE JSON NORMALIZER ====================
     function loadSavedQuestions() {
       try {
-        const saved = localStorage.getItem('csso_trivia_questions_bank_v27');
+        const saved = localStorage.getItem('csso_trivia_questions_bank_v28');
         if (saved) {
           const parsed = JSON.parse(saved);
           const normalized = parseAndNormalizeQuestions(parsed);
@@ -799,7 +839,7 @@
 
     function saveQuestionsToStorage() {
       try {
-        localStorage.setItem('csso_trivia_questions_bank_v27', JSON.stringify(questions));
+        localStorage.setItem('csso_trivia_questions_bank_v28', JSON.stringify(questions));
       } catch(e) {
         console.warn("localStorage error:", e);
       }
