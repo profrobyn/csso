@@ -136,11 +136,26 @@
       <div id="hostSubTabStage" class="space-y-6">
         <div class="bg-cssoNavyDark p-6 md:p-10 rounded-3xl border-2 border-cssoNavyLight shadow-2xl relative min-h-[600px] flex flex-col justify-between">
 
-          <!-- STAGE LOBBY SCREEN (WITH GAME RULES EXPLANATION) -->
-          <div id="stageLobbyScreen" class="py-8 text-center space-y-8 my-auto">
+          <!-- STAGE LOBBY SCREEN (WITH GAME RULES & WI-FI NOTICE) -->
+          <div id="stageLobbyScreen" class="py-8 text-center space-y-6 my-auto">
             <div>
               <h2 class="text-4xl md:text-6xl font-black text-white tracking-tight">Join the Live Trivia Contest</h2>
               <p class="text-base text-slate-300 mt-2">Scan the QR code or enter the link on your phone to register!</p>
+            </div>
+
+            <!-- CELLULAR DATA / TURN OFF WI-FI WARNING BANNER -->
+            <div class="max-w-2xl mx-auto bg-gradient-to-r from-rose-950 via-rose-900 to-rose-950 border-2 border-rose-500 rounded-2xl p-4 shadow-2xl flex items-center justify-center space-x-4 text-rose-100 animate-pulse">
+              <div class="w-12 h-12 rounded-xl bg-rose-800 text-rose-200 flex items-center justify-center text-2xl shrink-0 border border-rose-400 shadow">
+                <i class="fa-solid fa-wifi-slash"></i>
+              </div>
+              <div class="text-left">
+                <h3 class="text-base font-black text-rose-300 uppercase tracking-wider flex items-center gap-2">
+                  <span>⚠️ PLEASE TURN OFF WI-FI ON YOUR PHONE</span>
+                </h3>
+                <p class="text-xs font-bold text-rose-100 leading-snug mt-0.5">
+                  The program will <span class="underline underline-offset-2 font-black text-white">NOT LOAD</span> unless you are connected to your phone's cellular data plan!
+                </p>
+              </div>
             </div>
 
             <!-- GAME RULES HIGHLIGHT BOXES -->
@@ -311,7 +326,7 @@
     <!-- ==================== PLAYER SMARTPHONE VIEW ==================== -->
     <div id="playerViewSection" class="hidden max-w-md w-full mx-auto space-y-3">
 
-      <!-- PLAYER REGISTRATION CARD (WITH GAME RULES SUMMARY) -->
+      <!-- PLAYER REGISTRATION CARD (WITH GAME RULES & WI-FI NOTICE) -->
       <div id="playerRegisterCard" class="bg-cssoNavyDark p-5 rounded-2xl border-2 border-cssoGold shadow-2xl text-center space-y-4">
         <div class="w-14 h-14 mx-auto rounded-full bg-cssoGold text-cssoNavy flex items-center justify-center text-2xl font-bold shadow-md">
           <i class="fa-solid fa-user-astronaut"></i>
@@ -319,6 +334,15 @@
         <div>
           <h2 class="text-xl font-extrabold text-white">Join CSSO Trivia</h2>
           <p class="text-xs text-slate-300 mt-1">Please enter your name to join the game!</p>
+        </div>
+
+        <!-- PLAYER WI-FI WARNING ALERTS -->
+        <div class="bg-rose-950/80 p-3 rounded-xl border border-rose-500/60 text-left flex items-start space-x-2.5">
+          <i class="fa-solid fa-wifi-slash text-rose-400 text-lg shrink-0 mt-0.5"></i>
+          <div>
+            <p class="text-[11px] font-extrabold text-rose-300 uppercase tracking-wider">Use Cellular Data Only</p>
+            <p class="text-[11px] font-semibold text-rose-100 leading-tight mt-0.5">Please turn off Wi-Fi on your phone. The game requires your phone's cellular data plan to load.</p>
+          </div>
         </div>
 
         <!-- PLAYER GAME RULES EXPLANATION BOX -->
