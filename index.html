@@ -538,7 +538,7 @@
 
       <!-- SYSTEM CONTROL TOOLBAR -->
       <div class="bg-cssoNavy p-4 rounded-2xl border border-cssoNavyLight space-y-3">
-        <h4 class="text-xs font-bold text-cssoGold uppercase tracking-wider">Quick Actions & Audio</h4>
+        <h4 class="text-xs font-bold text-cssoGold uppercase tracking-wider">Quick Actions & Global Settings</h4>
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex flex-wrap items-center gap-2">
             <button onclick="testAudio()" class="px-3.5 py-2 rounded-xl bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition flex items-center gap-1.5">
@@ -546,6 +546,17 @@
             </button>
             <button onclick="switchMainTab('player')" class="px-3.5 py-2 rounded-xl bg-cssoNavyLight text-slate-200 border border-slate-600 font-bold text-xs hover:bg-slate-700 transition flex items-center gap-1.5">
               <i class="fa-solid fa-mobile-screen"></i> Switch to Player View
+            </button>
+          </div>
+
+          <!-- GLOBAL DEFAULT QUESTION TIMER CONTROL -->
+          <div class="flex items-center space-x-2 bg-cssoNavyDark px-3 py-1.5 rounded-xl border border-cssoNavyLight shadow">
+            <i class="fa-solid fa-stopwatch text-cssoGold text-xs"></i>
+            <label for="globalDefaultTimer" class="text-xs font-bold text-slate-300 whitespace-nowrap">Default Time All Questions:</label>
+            <input type="number" id="globalDefaultTimer" value="15" min="5" max="120" class="w-16 bg-cssoNavy border border-cssoNavyLight rounded-lg px-2 py-1 text-xs text-white text-center font-black focus:border-cssoGold focus:outline-none">
+            <span class="text-xs text-slate-400 font-bold">s</span>
+            <button onclick="applyGlobalDefaultTimer()" class="px-3 py-1 bg-cssoGold hover:bg-cssoGoldDark text-cssoNavy font-extrabold text-xs rounded-lg transition shadow">
+              Apply to All
             </button>
           </div>
 
@@ -674,9 +685,29 @@
     </div>
   </div>
 
-  <!-- GRAND PODIUM MODAL -->
+  <!-- GRAND PODIUM MODAL WITH DEDICATED VOLUME CONTROLS -->
   <div id="podiumModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-cssoNavyDark max-w-xl w-full p-6 md:p-8 rounded-2xl border-2 border-cssoGold shadow-2xl space-y-6 text-center relative overflow-hidden">
+      
+      <!-- PODIUM AUDIO VOLUME TOOLBAR -->
+      <div class="flex items-center justify-between border-b border-cssoNavyLight pb-3 bg-cssoNavy/60 -mt-2 -mx-2 px-3 py-2 rounded-xl">
+        <span class="text-xs font-bold text-cssoGold uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-music"></i> Podium Audio Controls
+        </span>
+        <div class="flex items-center space-x-1 bg-cssoNavyDark p-1 rounded-xl border border-cssoNavyLight shadow-inner">
+          <button onclick="toggleMute()" class="mute-btn-icon px-2 py-1 bg-cssoNavyLight hover:bg-slate-700 rounded-lg text-xs transition" title="Mute/Unmute">
+            <i class="fa-solid fa-volume-high text-emerald-400"></i>
+          </button>
+          <button onclick="adjustVolume(-0.25)" class="px-2 py-1 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 text-xs font-black rounded-lg transition" title="Decrease Volume 25%">
+            -25%
+          </button>
+          <span class="volume-pct-display text-xs font-black text-cssoGold px-1 min-w-[36px] text-center">50%</span>
+          <button onclick="adjustVolume(0.25)" class="px-2 py-1 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 text-xs font-black rounded-lg transition" title="Increase Volume 25%">
+            +25%
+          </button>
+        </div>
+      </div>
+
       <div>
         <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-cssoGold text-cssoNavy">Final Standings</span>
         <h2 class="text-3xl font-black text-white mt-1">🏆 Grand Winner Podium 🏆</h2>
@@ -987,6 +1018,27 @@
     function closeAdminModal() {
       const modal = document.getElementById('adminModal');
       if (modal) modal.classList.add('hidden');
+    }
+
+    // ==================== BATCH DEFAULT QUESTION TIMER CONTROL ====================
+    function applyGlobalDefaultTimer() {
+      const timerInput = document.getElementById('globalDefaultTimer');
+      const val = parseInt(timerInput ? timerInput.value : 15, 10);
+
+      if (isNaN(val) || val < 5 || val > 120) {
+        alert("Please enter a valid time duration between 5 and 120 seconds.");
+        return;
+      }
+
+      if (confirm(`Set default timer limit to ${val} seconds for ALL ${questions.length} questions?`)) {
+        questions.forEach(q => {
+          q.timeLimit = val;
+        });
+        document.getElementById('qTimer').value = val;
+        saveQuestionsToStorage();
+        renderQuestionsList();
+        alert(`🎉 Updated default timer for all questions to ${val} seconds!`);
+      }
     }
 
     // ==================== SYSTEM RESTART & FORCED RE-LOGIN ====================
@@ -1599,6 +1651,11 @@
 
     function triggerGrandPodium() {
       stopBassTimerMusic();
+
+      // Reduce volume to 50% of the previous volume display
+      currentVolume = Math.round((currentVolume * 0.5) * 100) / 100;
+      applyVolumeSettings();
+
       playPodiumVictoryMusic();
 
       const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0));
