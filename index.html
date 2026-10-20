@@ -103,22 +103,36 @@
 </head>
 <body class="min-h-screen flex flex-col pb-6" onclick="unlockAudioContextOnUserGesture()">
 
-  <!-- CLEAN HEADER WITH SINGLE CONTROL BUTTON -->
-  <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-6 py-4 sticky top-0 z-40 flex items-center justify-between shadow-lg">
+  <!-- HEADER WITH PERSISTENT VOLUME CONTROLS & HOST BUTTON -->
+  <header class="bg-cssoNavyDark border-b border-cssoNavyLight px-4 sm:px-6 py-3.5 sticky top-0 z-40 flex items-center justify-between shadow-lg flex-wrap gap-2">
     <div class="flex items-center space-x-3">
       <div class="w-10 h-10 rounded-xl bg-cssoGold flex items-center justify-center text-cssoNavy font-bold text-2xl shadow-md">
         <i class="fa-solid fa-award"></i>
       </div>
       <div>
-        <h1 class="text-xl font-black text-cssoGold tracking-wide leading-none">CSSO Trivia Giveaway</h1>
+        <h1 class="text-lg sm:text-xl font-black text-cssoGold tracking-wide leading-none">CSSO Trivia Giveaway</h1>
       </div>
     </div>
 
-    <!-- SINGLE HOST CONTROLS TRIGGER BUTTON -->
+    <!-- PERSISTENT VOLUME CONTROL TOOLBAR & HOST TRIGGER -->
     <div class="flex items-center space-x-2">
-      <button onclick="toggleAdminModal()" class="px-4 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-100 font-extrabold text-xs rounded-xl border border-slate-600 transition flex items-center gap-2 shadow-lg">
+      <!-- Volume Controls -->
+      <div class="flex items-center space-x-1 bg-cssoNavy p-1 rounded-xl border border-cssoNavyLight shadow-inner">
+        <button onclick="toggleMute()" class="mute-btn-icon px-2.5 py-1.5 bg-cssoNavyLight hover:bg-slate-700 rounded-lg text-xs transition flex items-center gap-1" title="Mute/Unmute">
+          <i class="fa-solid fa-volume-high text-emerald-400"></i>
+        </button>
+        <button onclick="adjustVolume(-0.25)" class="px-2 py-1.5 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 text-xs font-black rounded-lg transition" title="Decrease Volume 25%">
+          -25%
+        </button>
+        <span class="volume-pct-display text-xs font-black text-cssoGold px-1.5 min-w-[40px] text-center">100%</span>
+        <button onclick="adjustVolume(0.25)" class="px-2 py-1.5 bg-cssoNavyLight hover:bg-slate-700 text-slate-200 text-xs font-black rounded-lg transition" title="Increase Volume 25%">
+          +25%
+        </button>
+      </div>
+
+      <button onclick="toggleAdminModal()" class="px-3.5 py-2 bg-cssoNavyLight hover:bg-slate-700 text-slate-100 font-extrabold text-xs rounded-xl border border-slate-600 transition flex items-center gap-1.5 shadow-lg">
         <i class="fa-solid fa-sliders text-cssoGold text-sm"></i>
-        <span>Host Controls</span>
+        <span class="hidden sm:inline">Host Controls</span>
       </button>
     </div>
   </header>
@@ -517,9 +531,6 @@
         <h4 class="text-xs font-bold text-cssoGold uppercase tracking-wider">Quick Actions & Audio</h4>
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex flex-wrap items-center gap-2">
-            <button id="musicToggleBtn" onclick="toggleMusicMute()" class="px-3.5 py-2 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs hover:bg-emerald-900 transition flex items-center gap-1.5">
-              <i class="fa-solid fa-volume-high"></i> Music On
-            </button>
             <button onclick="testAudio()" class="px-3.5 py-2 rounded-xl bg-amber-950 text-amber-300 border border-amber-700 font-bold text-xs hover:bg-amber-900 transition flex items-center gap-1.5">
               <i class="fa-solid fa-music"></i> Test Audio
             </button>
@@ -715,9 +726,12 @@
     const ROOM_ID = 'csso_trivia_symposium_2026';
     const roomRef = db.ref(`rooms/${ROOM_ID}`);
 
-    // ==================== DIRECT RAW MP3 AUDIO STREAMING ====================
-    let isMuted = false;
+    // ==================== DIRECT RAW MP3 AUDIO STREAMING & VOLUME PERSISTENCE ====================
     let audioUnlocked = false;
+
+    // Load volume preferences from LocalStorage (default: 1.0 volume, unmuted)
+    let currentVolume = parseFloat(localStorage.getItem('csso_trivia_volume') || '1.0');
+    let isMuted = localStorage.getItem('csso_trivia_muted') === 'true';
 
     const QUESTION_AUDIO_URL = 'https://github.com/profrobyn/csso/raw/main/Question.mp3';
     const PODIUM_AUDIO_URL = 'https://github.com/profrobyn/csso/raw/main/Podium.mp3';
@@ -730,9 +744,46 @@
     podiumAudio.loop = true;
     podiumAudio.preload = 'auto';
 
+    function applyVolumeSettings() {
+      let activeVol = isMuted ? 0 : currentVolume;
+      questionAudio.volume = Math.max(0, Math.min(1, activeVol));
+      podiumAudio.volume = Math.max(0, Math.min(1, activeVol));
+
+      localStorage.setItem('csso_trivia_volume', currentVolume.toString());
+      localStorage.setItem('csso_trivia_muted', isMuted.toString());
+
+      updateVolumeUI();
+    }
+
+    function adjustVolume(delta) {
+      if (isMuted) isMuted = false;
+      currentVolume = Math.round((currentVolume + delta) * 100) / 100;
+      currentVolume = Math.max(0, Math.min(1, currentVolume));
+      applyVolumeSettings();
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      applyVolumeSettings();
+    }
+
+    function updateVolumeUI() {
+      const pct = Math.round((isMuted ? 0 : currentVolume) * 100);
+      const volDisplays = document.querySelectorAll('.volume-pct-display');
+      volDisplays.forEach(el => el.textContent = `${pct}%`);
+
+      const muteBtns = document.querySelectorAll('.mute-btn-icon');
+      muteBtns.forEach(btn => {
+        btn.innerHTML = (isMuted || currentVolume === 0) 
+          ? '<i class="fa-solid fa-volume-xmark text-rose-400"></i>' 
+          : '<i class="fa-solid fa-volume-high text-emerald-400"></i>';
+      });
+    }
+
     function unlockAudioContextOnUserGesture() {
       if (!audioUnlocked) {
         audioUnlocked = true;
+        applyVolumeSettings();
         questionAudio.load();
         podiumAudio.load();
       }
@@ -740,13 +791,14 @@
 
     function testAudio() {
       audioUnlocked = true;
-      if (isMuted) toggleMusicMute();
+      if (isMuted) toggleMute();
       playBassTimerMusic();
       setTimeout(() => { stopBassTimerMusic(); }, 3500);
     }
 
     function playBassTimerMusic() {
-      if (isMuted) return;
+      applyVolumeSettings();
+      if (isMuted || currentVolume === 0) return;
       podiumAudio.pause();
       podiumAudio.currentTime = 0;
       
@@ -758,7 +810,8 @@
     }
 
     function playPodiumVictoryMusic() {
-      if (isMuted) return;
+      applyVolumeSettings();
+      if (isMuted || currentVolume === 0) return;
       questionAudio.pause();
       questionAudio.currentTime = 0;
       
@@ -772,16 +825,6 @@
     function stopBassTimerMusic() {
       questionAudio.pause();
       podiumAudio.pause();
-    }
-
-    function toggleMusicMute() {
-      isMuted = !isMuted;
-      const btn = document.getElementById('musicToggleBtn');
-      if (btn) {
-        btn.innerHTML = isMuted ? '<i class="fa-solid fa-volume-xmark"></i> Music Off' : '<i class="fa-solid fa-volume-high"></i> Music On';
-        btn.className = isMuted ? 'px-3.5 py-2 rounded-xl bg-rose-950 text-rose-300 border border-rose-700 font-bold text-xs transition flex items-center gap-1.5' : 'px-3.5 py-2 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-xs transition flex items-center gap-1.5';
-      }
-      if (isMuted) stopBassTimerMusic();
     }
 
     // ==================== FULL-SCREEN PRESENTATION MODE ====================
@@ -827,6 +870,8 @@
     let isHost = true;
 
     window.addEventListener('DOMContentLoaded', () => {
+      applyVolumeSettings();
+
       const urlParams = new URLSearchParams(window.location.search);
       const isPlayerJoin = urlParams.get('join') === 'true';
 
@@ -971,7 +1016,6 @@
         updateLobbyPlayerCounts();
         renderStageLeaderboard();
 
-        // FORCED LOGOUT: If localPlayer exists but is no longer in Firebase, force re-registration!
         if (localPlayer) {
           if (val && val[localPlayer.id]) {
             localPlayer = val[localPlayer.id];
@@ -1225,9 +1269,31 @@
       }
     }
 
+    // ==================== LEADERBOARD RENDERER (LOCKED ON PENULTIMATE & FINAL QUESTIONS) ====================
     function renderStageLeaderboard() {
       const container = document.getElementById('stageLeaderboardList');
       if (!container) return;
+
+      // HIDE RANKINGS STARTING FROM THE PENULTIMATE QUESTION
+      const totalQ = questions.length;
+      const isPenultimateOrFinal = (totalQ > 1 && currentQIndex >= totalQ - 2);
+
+      if (isPenultimateOrFinal) {
+        container.innerHTML = `
+          <div class="p-6 text-center space-y-3 bg-cssoNavyDark/90 rounded-2xl border-2 border-cssoGold/50 my-2 shadow-2xl">
+            <div class="w-12 h-12 mx-auto rounded-full bg-cssoGold/20 text-cssoGold flex items-center justify-center text-2xl animate-pulse">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <div>
+              <h4 class="text-sm font-black text-cssoGold uppercase tracking-wider">Rankings Locked For Finale! 🤫</h4>
+              <p class="text-xs text-slate-300 mt-1 max-w-xs mx-auto leading-relaxed">
+                Leaderboard scores are hidden to keep the final winner a secret! Click <span class="text-purple-300 font-bold">Grand Podium</span> at the end to reveal who won!
+              </p>
+            </div>
+          </div>
+        `;
+        return;
+      }
 
       const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
 
@@ -1425,6 +1491,13 @@
 
     function getPlayerOverallRank() {
       if (!localPlayer || registeredPlayers.length === 0) return "--";
+
+      // HIDE RANKING ON MOBILE STARTING PENULTIMATE QUESTION
+      const totalQ = questions.length;
+      if (totalQ > 1 && currentQIndex >= totalQ - 2) {
+        return "🔒 Hidden for Finale";
+      }
+
       const sorted = [...registeredPlayers].sort((a, b) => (b.score || 0) - (a.score || 0));
       const rankIdx = sorted.findIndex(p => p.id === localPlayer.id);
       if (rankIdx === -1) return "--";
