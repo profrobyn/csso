@@ -218,7 +218,7 @@
             </div>
           </div>
 
-          <!-- STAGE QUESTION SCREEN WITH CARTOONISH TIMER -->
+          <!-- STAGE QUESTION SCREEN WITH CARTOONISH TIMER & LIVE ANSWER COUNTER -->
           <div id="stageQuestionScreen" class="hidden py-4 space-y-6 my-auto">
             <div class="flex flex-wrap items-center justify-between gap-3 bg-cssoNavy p-4 rounded-2xl border border-cssoNavyLight">
               <span id="stageQNumber" class="text-lg font-extrabold text-cssoGold uppercase tracking-wider">Question 1</span>
@@ -238,6 +238,16 @@
                 <button onclick="skipCurrentQuestion()" class="px-3.5 py-2 rounded-xl bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-600 font-bold text-xs transition flex items-center gap-1.5">
                   <i class="fa-solid fa-forward-step"></i> Skip Question
                 </button>
+
+                <!-- LIVE RESPONSES COUNTER BADGE -->
+                <div id="stageResponseCountBox" class="bg-cssoNavyDark px-4 py-2 rounded-2xl border-2 border-emerald-500/60 flex items-center space-x-2.5 shadow-xl">
+                  <i class="fa-solid fa-users-check text-emerald-400 text-2xl"></i>
+                  <div class="text-left leading-none">
+                    <p class="text-[9px] text-slate-400 uppercase font-black tracking-wider">Answered</p>
+                    <p id="stageResponseCount" class="text-xl md:text-2xl font-black text-emerald-400 mt-0.5">0 / 0</p>
+                  </div>
+                </div>
+
                 <!-- CARTOONISH TIMER BOX -->
                 <div class="bg-cssoNavyDark px-6 py-2 rounded-2xl border-2 border-cssoGold flex items-center space-x-2 shadow-xl">
                   <i class="fa-solid fa-clock text-cssoGold text-2xl"></i>
@@ -1015,6 +1025,7 @@
         registeredPlayers = val ? Object.values(val) : [];
         updateLobbyPlayerCounts();
         renderStageLeaderboard();
+        updateStageResponseCount();
 
         if (localPlayer) {
           if (val && val[localPlayer.id]) {
@@ -1055,6 +1066,7 @@
         } else {
           currentResponses = [];
         }
+        updateStageResponseCount();
       });
 
       roomRef.child('waves').limitToLast(1).on('child_added', (snapshot) => {
@@ -1063,6 +1075,27 @@
           triggerFloatingNamePop(wave.name);
         }
       });
+    }
+
+    // ==================== LIVE RESPONSE COUNTER & AUTO-SKIP LOGIC ====================
+    function updateStageResponseCount() {
+      const respEl = document.getElementById('stageResponseCount');
+      const totalPlayers = registeredPlayers.length;
+      const answeredCount = currentResponses.length;
+
+      if (respEl) {
+        respEl.textContent = `${answeredCount} / ${totalPlayers}`;
+      }
+
+      // AUTO-SKIP: If state is active QUESTION, everyone currently playing has answered, and timer is running -> SKIP IMMEDIATELY!
+      if (isHost && activeGameState === 'QUESTION' && totalPlayers > 0 && answeredCount >= totalPlayers) {
+        if (stageTimerInterval) {
+          clearInterval(stageTimerInterval);
+          stageTimerInterval = null;
+          stopBassTimerMusic();
+          handleTimeExpired();
+        }
+      }
     }
 
     function sendPlayerWave() {
@@ -1087,7 +1120,8 @@
 
     function skipCurrentQuestion() {
       if (confirm("Skip current timer and proceed straight to answer reveal?")) {
-        clearInterval(stageTimerInterval);
+        if (stageTimerInterval) clearInterval(stageTimerInterval);
+        stageTimerInterval = null;
         stopBassTimerMusic();
         handleTimeExpired();
       }
@@ -1132,19 +1166,21 @@
       `).join('');
 
       showStageScreen('question');
+      updateStageResponseCount();
 
       stageTimeRemaining = q.timeLimit;
       document.getElementById('stageTimer').textContent = `${stageTimeRemaining}s`;
 
       playBassTimerMusic();
 
-      clearInterval(stageTimerInterval);
+      if (stageTimerInterval) clearInterval(stageTimerInterval);
       stageTimerInterval = setInterval(() => {
         stageTimeRemaining--;
         document.getElementById('stageTimer').textContent = `${stageTimeRemaining}s`;
 
         if (stageTimeRemaining <= 0) {
           clearInterval(stageTimerInterval);
+          stageTimerInterval = null;
           stopBassTimerMusic();
           handleTimeExpired();
         }
